@@ -1,0 +1,238 @@
+/* Estilos para DataGrid en modo oscuro */
+[data-theme="dark"] .MuiDataGrid-root {
+  background-color: #1e1e1e !important;
+  border: 1px solid #444 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-cell {
+  border-bottom: 1px solid #444 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-columnHeaders {
+  background-color: #2e2e2e !important;
+  border-bottom: 1px solid #444 !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-columnHeader {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-columnHeaderTitle {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-row {
+  background-color: #1e1e1e !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-row:hover {
+  background-color: #333333 !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-row.Mui-selected {
+  background-color: #0d47a1 !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-row.Mui-selected:hover {
+  background-color: #1565c0 !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-footerContainer {
+  background-color: #2e2e2e !important;
+  border-top: 1px solid #444 !important;
+}
+
+[data-theme="dark"] .MuiTablePagination-root {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-toolbarContainer {
+  background-color: #2e2e2e !important;
+  border-bottom: 1px solid #444 !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-columnSeparator {
+  color: #444 !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-iconSeparator {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-menuIcon {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-sortIcon {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDataGrid-filterIcon {
+  color: #ffffff !important;
+}
+
+/* Mejoras adicionales para Paper y Card en modo oscuro */
+[data-theme="dark"] .MuiPaper-root {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiCard-root {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
+/* Estilos para Alert en modo oscuro */
+[data-theme="dark"] .MuiAlert-root {
+  background-color: #2e2e2e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiAlert-standardInfo {
+  background-color: #0d47a1 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiAlert-standardSuccess {
+  background-color: #2e7d32 !important;
+  color: #ffffff !important;
+}
+
+/* Estilos para Chip en modo oscuro */
+[data-theme="dark"] .MuiChip-root {
+  background-color: #444 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiChip-colorPrimary {
+  background-color: #1976d2 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiChip-colorSecondary {
+  background-color: #dc004e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiChip-colorSuccess {
+  background-color: #2e7d32 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiChip-colorWarning {
+  background-color: #ed6c02 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiChip-colorError {
+  background-color: #d32f2f !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiChip-colorInfo {
+  background-color: #0288d1 !important;
+  color: #ffffff !important;
+}
+
+/* Estilos para Diálogos en modo oscuro */
+[data-theme="dark"] .MuiDialog-paper {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDialogTitle-root {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDialogContent-root {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiDialogActions-root {
+  background-color: #1e1e1e !important;
+}
+
+/* Estilos para TextField en modo oscuro */
+[data-theme="dark"] .MuiTextField-root .MuiInputBase-root {
+  background-color: #2e2e2e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiTextField-root .MuiInputLabel-root {
+  color: #bbbbbb !important;
+}
+
+[data-theme="dark"] .MuiTextField-root .MuiInputLabel-root.Mui-focused {
+  color: #1976d2 !important;
+}
+
+[data-theme="dark"] .MuiTextField-root .MuiOutlinedInput-notchedOutline {
+  border-color: #444 !important;
+}
+
+[data-theme="dark"] .MuiTextField-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #666 !important;
+}
+
+[data-theme="dark"] .MuiTextField-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1976d2 !important;
+}
+
+/* Estilos para Select en modo oscuro */
+[data-theme="dark"] .MuiSelect-root {
+  background-color: #2e2e2e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root {
+  background-color: #2e2e2e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root:hover {
+  background-color: #444 !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root.Mui-selected {
+  background-color: #1976d2 !important;
+}
+
+/* Estilos para Menu en modo oscuro */
+[data-theme="dark"] .MuiMenu-paper {
+  background-color: #2e2e2e !important;
+}
+
+/* Estilos para Typography y otros textos */
+[data-theme="dark"] .MuiTypography-root {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiTypography-colorTextSecondary {
+  color: #bbbbbb !important;
+}
+
+/* Estilos para botones en modo oscuro */
+[data-theme="dark"] .MuiButton-containedPrimary {
+  background-color: #1976d2 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiButton-outlined {
+  border-color: #444 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .MuiButton-outlined:hover {
+  border-color: #666 !important;
+  background-color: #333 !important;
+}
+
+/* Estilos para iconos */
+[data-theme="dark"] .MuiSvgIcon-root {
+  color: #ffffff !important;
+}

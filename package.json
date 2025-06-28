@@ -1,0 +1,84 @@
+{
+  "name": "gestion-casos-react",
+  "version": "1.0.0",
+  "description": "Sistema completo de gestión de casos desarrollado con React, TypeScript y Supabase",
+  "keywords": [
+    "react",
+    "typescript",
+    "supabase",
+    "case-management",
+    "dashboard",
+    "material-ui",
+    "todo-management",
+    "time-tracking",
+    "reports"
+  ],
+  "author": "Tu Nombre <tu.email@ejemplo.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/gestion-casos-react.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/gestion-casos-react/issues"
+  },
+  "homepage": "https://github.com/tu-usuario/gestion-casos-react#readme",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@hookform/resolvers": "^3.10.0",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/material": "^5.15.0",
+    "@mui/x-data-grid": "^6.20.4",
+    "@mui/x-date-pickers": "^6.18.3",
+    "@supabase/supabase-js": "^2.39.0",
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "ajv": "^8.12.0",
+    "ajv-keywords": "^5.1.0",
+    "chart.js": "^4.4.0",
+    "dayjs": "^1.11.10",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.59.0",
+    "react-router-dom": "^6.20.1",
+    "react-scripts": "5.0.1",
+    "react-toastify": "^9.1.3",
+    "recharts": "^2.8.0",
+    "typescript": "^4.9.5",
+    "web-vitals": "^3.5.0",
+    "xlsx": "^0.18.5",
+    "yup": "^1.4.0",
+    "zustand": "^4.4.7"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/xlsx": "^0.0.36"
+  }
+}
