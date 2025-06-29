@@ -22,7 +22,6 @@
   "bugs": {
     "url": "https://github.com/tu-usuario/gestion-casos-react/issues"
   },
-  "homepage": "https://github.com/tu-usuario/gestion-casos-react#readme",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.11.1",
