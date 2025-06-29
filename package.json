@@ -1,27 +1,6 @@
 {
   "name": "gestion-casos-react",
   "version": "1.0.0",
-  "description": "Sistema completo de gestión de casos desarrollado con React, TypeScript y Supabase",
-  "keywords": [
-    "react",
-    "typescript",
-    "supabase",
-    "case-management",
-    "dashboard",
-    "material-ui",
-    "todo-management",
-    "time-tracking",
-    "reports"
-  ],
-  "author": "Tu Nombre <tu.email@ejemplo.com>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/tu-usuario/gestion-casos-react.git"
-  },
-  "bugs": {
-    "url": "https://github.com/tu-usuario/gestion-casos-react/issues"
-  },
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.11.1",

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { hashPassword, verifyPassword } from '../utils/passwordUtils';
 import { logger } from '../utils/logger';
+import { auditService } from './auditService';
 import { 
   User, 
   Role, 
@@ -175,14 +176,14 @@ export const userService = {
   },
 
   async delete(id: string): Promise<void> {
-    // Verificar que el usuario existe
-    const { data: userExists, error: userExistsError } = await supabase
+    // Verificar que el usuario existe y obtener sus datos para el log
+    const { data: userToDelete, error: userExistsError } = await supabase
       .from('users')
-      .select('id')
+      .select('*')
       .eq('id', id)
       .single();
 
-    if (userExistsError || !userExists) {
+    if (userExistsError || !userToDelete) {
       throw new Error('El usuario especificado no existe');
     }
 
@@ -231,6 +232,7 @@ export const userService = {
       throw new Error('No se puede eliminar el usuario porque tiene registros de tiempo');
     }
 
+    // Eliminar el usuario
     const { error } = await supabase
       .from('users')
       .delete()
@@ -239,6 +241,22 @@ export const userService = {
     if (error) {
       console.error('Error eliminando usuario:', error);
       throw new Error(error.message || 'Error al eliminar el usuario');
+    }
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'users',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: userToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Usuario eliminado: ${userToDelete.name} (${userToDelete.email})`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+      // No lanzar error para no afectar la operación principal
     }
   },
 
@@ -380,12 +398,38 @@ export const roleService = {
   },
 
   async delete(id: string): Promise<void> {
+    // Obtener los datos del rol antes de eliminarlo para auditoría
+    const { data: roleToDelete, error: getRoleError } = await supabase
+      .from('roles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (getRoleError || !roleToDelete) {
+      throw new Error('El rol especificado no existe');
+    }
+
     const { error } = await supabase
       .from('roles')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'roles',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: roleToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Rol eliminado: ${roleToDelete.name} - ${roleToDelete.description}`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   },
 
   async assignPermissions(roleId: string, permissionIds: string[]): Promise<void> {
@@ -458,12 +502,38 @@ export const permissionService = {
   },
 
   async delete(id: string): Promise<void> {
+    // Obtener los datos del permiso antes de eliminarlo para auditoría
+    const { data: permissionToDelete, error: getPermissionError } = await supabase
+      .from('permissions')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (getPermissionError || !permissionToDelete) {
+      throw new Error('El permiso especificado no existe');
+    }
+
     const { error } = await supabase
       .from('permissions')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'permissions',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: permissionToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Permiso eliminado: ${permissionToDelete.name} (${permissionToDelete.module}.${permissionToDelete.action})`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   }
 };
 
@@ -503,12 +573,38 @@ export const applicationService = {
   },
 
   async delete(id: string): Promise<void> {
+    // Obtener los datos de la aplicación antes de eliminarla para auditoría
+    const { data: appToDelete, error: getAppError } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (getAppError || !appToDelete) {
+      throw new Error('La aplicación especificada no existe');
+    }
+
     const { error } = await supabase
       .from('applications')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'applications',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: appToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Aplicación eliminada: ${appToDelete.name} - ${appToDelete.description}`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   }
 };
 
@@ -548,12 +644,38 @@ export const originService = {
   },
 
   async delete(id: string): Promise<void> {
+    // Obtener los datos del origen antes de eliminarlo para auditoría
+    const { data: originToDelete, error: getOriginError } = await supabase
+      .from('origins')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (getOriginError || !originToDelete) {
+      throw new Error('El origen especificado no existe');
+    }
+
     const { error } = await supabase
       .from('origins')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'origins',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: originToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Origen eliminado: ${originToDelete.name} - ${originToDelete.description}`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   }
 };
 
@@ -593,12 +715,38 @@ export const priorityService = {
   },
 
   async delete(id: string): Promise<void> {
+    // Obtener los datos de la prioridad antes de eliminarla para auditoría
+    const { data: priorityToDelete, error: getPriorityError } = await supabase
+      .from('priorities')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (getPriorityError || !priorityToDelete) {
+      throw new Error('La prioridad especificada no existe');
+    }
+
     const { error } = await supabase
       .from('priorities')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'priorities',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: priorityToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Prioridad eliminada: ${priorityToDelete.name} (Nivel ${priorityToDelete.level}) - ${priorityToDelete.description}`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   }
 };
 
@@ -834,7 +982,13 @@ export const caseService = {
     // Validar que el caso existe y el usuario tiene permisos para eliminarlo
     let caseQuery = supabase
       .from('cases')
-      .select('id, user_id')
+      .select(`
+        *,
+        applications(name),
+        origins(name),
+        priorities(name),
+        users(name)
+      `)
       .eq('id', id);
 
     // Si no es admin, verificar que el caso pertenece al usuario actual
@@ -842,9 +996,9 @@ export const caseService = {
       caseQuery = caseQuery.eq('user_id', currentUserId);
     }
 
-    const { data: caseExists, error: caseExistsError } = await caseQuery.single();
+    const { data: caseToDelete, error: caseExistsError } = await caseQuery.single();
 
-    if (caseExistsError || !caseExists) {
+    if (caseExistsError || !caseToDelete) {
       if (caseExistsError?.code === 'PGRST116' && !isAdmin) {
         throw new Error('No tienes permisos para eliminar este caso o el caso no existe');
       }
@@ -857,6 +1011,21 @@ export const caseService = {
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'cases',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: caseToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Caso eliminado: ${caseToDelete.case_number} - ${caseToDelete.description?.substring(0, 100)}...`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   },
 
   async updateStatus(id: string, status: Case['status']): Promise<Case> {
@@ -1086,12 +1255,44 @@ export const todoService = {
   },
 
   async delete(id: string): Promise<void> {
+    // Obtener los datos del TODO antes de eliminarlo para auditoría
+    const { data: todoToDelete, error: getTodoError } = await supabase
+      .from('todos')
+      .select(`
+        *,
+        priority:priorities(name),
+        assigned_user:users!assigned_to(name),
+        created_by_user:users!created_by(name),
+        case:cases(case_number)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (getTodoError || !todoToDelete) {
+      throw new Error('El TODO especificado no existe');
+    }
+
     const { error } = await supabase
       .from('todos')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      await auditService.createAuditLog({
+        table_name: 'todos',
+        operation: 'DELETE',
+        record_id: id,
+        old_data: todoToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `TODO eliminado: ${todoToDelete.title} - ${todoToDelete.description?.substring(0, 100)}...`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   },
 
   async updateStatus(id: string, status: Todo['status']): Promise<Todo> {
@@ -1347,39 +1548,85 @@ export const timeService = {
   async deleteTimeEntry(id: string, type: 'case' | 'todo'): Promise<void> {
     const table = type === 'case' ? 'time_entries' : 'time_tracking';
 
+    // Obtener los datos antes de eliminar para auditoría
+    const { data: timeEntryToDelete, error: getTimeError } = await supabase
+      .from(table)
+      .select(`
+        *,
+        ${type === 'case' ? 'cases(case_number, description)' : 'todos(title, description)'},
+        users(name, email)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (getTimeError || !timeEntryToDelete) {
+      throw new Error(`El registro de tiempo especificado no existe`);
+    }
+
     const { error } = await supabase
       .from(table)
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Registrar la eliminación en el log de auditoría
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const relatedItem = type === 'case' 
+        ? timeEntryToDelete.cases?.case_number 
+        : timeEntryToDelete.todos?.title;
+      
+      await auditService.createAuditLog({
+        table_name: table,
+        operation: 'DELETE',
+        record_id: id,
+        old_data: timeEntryToDelete,
+        user_id: currentUser.id || 'unknown',
+        description: `Registro de tiempo eliminado del ${type === 'case' ? 'caso' : 'TODO'}: ${relatedItem} - Usuario: ${timeEntryToDelete.users?.name}`
+      });
+    } catch (auditError) {
+      console.error('Error registrando auditoría:', auditError);
+    }
   }
 };
 
 // Servicio de Reportes
 export const reportService = {
-  async getCaseReport(startDate: string, endDate: string): Promise<any> {
-    const { data, error } = await supabase
+  async getCaseReport(startDate: string, endDate: string, userId?: string, isAdmin?: boolean): Promise<any> {
+    let query = supabase
       .from('cases_detailed')
       .select('*')
       .gte('created_at', startDate)
       .lte('created_at', endDate);
     
+    // Si no es admin, filtrar solo por el usuario actual
+    if (!isAdmin && userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
 
-  async getUserReport(startDate: string, endDate: string): Promise<any> {
-    const { data, error } = await supabase
+  async getUserReport(startDate: string, endDate: string, userId?: string, isAdmin?: boolean): Promise<any> {
+    let query = supabase
       .from('user_time_summary')
       .select('*');
     
+    // Si no es admin, filtrar solo por el usuario actual
+    if (!isAdmin && userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
 
-  async getTimeReport(startDate: string, endDate: string): Promise<any> {
-    const { data: timeEntries, error: timeError } = await supabase
+  async getTimeReport(startDate: string, endDate: string, userId?: string, isAdmin?: boolean): Promise<any> {
+    let timeEntriesQuery = supabase
       .from('time_entries')
       .select(`
         *,
@@ -1395,9 +1642,7 @@ export const reportService = {
       .gte('start_time', startDate)
       .lte('start_time', endDate);
 
-    if (timeError) throw timeError;
-
-    const { data: timeTracking, error: trackingError } = await supabase
+    let timeTrackingQuery = supabase
       .from('time_tracking')
       .select(`
         *,
@@ -1413,6 +1658,16 @@ export const reportService = {
       .gte('start_time', startDate)
       .lte('start_time', endDate);
 
+    // Si no es admin, filtrar solo por el usuario actual
+    if (!isAdmin && userId) {
+      timeEntriesQuery = timeEntriesQuery.eq('user_id', userId);
+      timeTrackingQuery = timeTrackingQuery.eq('user_id', userId);
+    }
+
+    const { data: timeEntries, error: timeError } = await timeEntriesQuery;
+    if (timeError) throw timeError;
+
+    const { data: timeTracking, error: trackingError } = await timeTrackingQuery;
     if (trackingError) throw trackingError;
 
     return {

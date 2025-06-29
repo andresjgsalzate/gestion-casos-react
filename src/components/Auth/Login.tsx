@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Container,
+  Paper,
   TextField,
   Button,
   Typography,
@@ -19,91 +20,24 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasNavigated, setHasNavigated] = useState(false);
-  const submissionCount = React.useRef(0);
   
-  const { login, user } = useAuthStore();
+  const { login } = useAuthStore();
   const navigate = useNavigate();
-
-  // Manejar redirection cuando el usuario está autenticado
-  useEffect(() => {
-    if (user && !loading && !isSubmitting && !hasNavigated) {
-      setHasNavigated(true);
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, loading, isSubmitting, hasNavigated, navigate]);
-
-  // No renderizar el formulario si el usuario ya está autenticado
-  if (user && !loading && !isSubmitting) {
-    return null;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Prevenir múltiples submissions
-    if (isSubmitting || loading) {
-      return;
-    }
-
-    // Validaciones en el frontend
-    if (!email.trim()) {
-      setError('El email es requerido');
-      return;
-    }
-
-    if (!email.includes('@')) {
-      setError('Por favor ingresa un email válido');
-      return;
-    }
-
-    if (!password) {
-      setError('La contraseña es requerida');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-    
-    submissionCount.current++;
-    setIsSubmitting(true);
     setLoading(true);
-    setError(''); // Limpiar error anterior solo cuando se inicia un nuevo intento
+    setError('');
 
     try {
-      await login(email.trim().toLowerCase(), password);
-      // La navegación se maneja en el useEffect
+      await login(email, password);
+      // Guardar usuario en localStorage para persistencia
+      localStorage.setItem('currentUser', JSON.stringify({ email }));
+      navigate('/dashboard');
     } catch (err: any) {
-      let errorMessage = '';
-      
-      // Manejar diferentes tipos de errores
-      if (err.message?.includes('Email y contraseña son requeridos')) {
-        errorMessage = 'Por favor completa todos los campos';
-      } else if (err.message?.includes('email válido')) {
-        errorMessage = 'Por favor ingresa un email válido';
-      } else if (err.message?.includes('contraseña debe tener')) {
-        errorMessage = 'La contraseña debe tener al menos 6 caracteres';
-      } else if (err.message?.includes('Email o contraseña incorrectos')) {
-        errorMessage = 'Email o contraseña incorrectos. Por favor verifica tus credenciales e intenta nuevamente.';
-      } else if (err.message?.includes('cuenta está desactivada')) {
-        errorMessage = 'Tu cuenta está desactivada. Contacta al administrador para activarla.';
-      } else if (err.message?.includes('Error de configuración del sistema')) {
-        errorMessage = 'Error de configuración del sistema. Contacta al administrador.';
-      } else if (err.message?.includes('Error en los datos del usuario')) {
-        errorMessage = 'Hay un problema con tu cuenta. Contacta al administrador.';
-      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
-        errorMessage = 'Error de conexión. Por favor verifica tu conexión a internet e intenta nuevamente.';
-      } else {
-        errorMessage = 'Error al iniciar sesión. Por favor intenta nuevamente.';
-      }
-      
-      setError(errorMessage);
+      setError(err.message || 'Error de autenticación');
     } finally {
       setLoading(false);
-      setIsSubmitting(false);
     }
   };
 
@@ -147,21 +81,7 @@ const Login: React.FC = () => {
             </Box>
 
             {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  mb: 2,
-                  '& .MuiAlert-message': {
-                    fontSize: '0.95rem',
-                    fontWeight: 500
-                  },
-                  '& .MuiAlert-icon': {
-                    fontSize: '1.2rem'
-                  }
-                }}
-                variant="filled"
-                onClose={() => setError('')}
-              >
+              <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
@@ -177,19 +97,8 @@ const Login: React.FC = () => {
                 autoComplete="email"
                 autoFocus
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  // Solo limpiar errores de validación del frontend
-                  if (error && (
-                    error.includes('email es requerido') || 
-                    error.includes('email válido') ||
-                    error.includes('completa todos los campos')
-                  )) {
-                    setError('');
-                  }
-                }}
-                disabled={loading || isSubmitting}
-                error={!!error && error.includes('email')}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
               <TextField
                 margin="normal"
@@ -201,33 +110,34 @@ const Login: React.FC = () => {
                 id="password"
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  // Solo limpiar errores de validación del frontend
-                  if (error && (
-                    error.includes('contraseña es requerida') || 
-                    error.includes('contraseña debe tener') ||
-                    error.includes('completa todos los campos')
-                  )) {
-                    setError('');
-                  }
-                }}
-                disabled={loading || isSubmitting}
-                error={!!error && error.includes('contraseña')}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2, py: 1.5 }}
-                disabled={loading || isSubmitting}
+                disabled={loading}
               >
-                {loading || isSubmitting ? (
+                {loading ? (
                   <CircularProgress size={24} color="inherit" />
                 ) : (
                   'Iniciar Sesión'
                 )}
               </Button>
+            </Box>
+
+            <Box sx={{ mt: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                <strong>Usuario de prueba:</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Email: andresjgsalzate@gmail.com
+              </Typography>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Contraseña: cualquier contraseña
+              </Typography>
             </Box>
           </CardContent>
         </Card>

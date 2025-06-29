@@ -86,34 +86,45 @@ const Reports: React.FC = () => {
       const start = startDate.format('YYYY-MM-DD');
       const end = endDate.format('YYYY-MM-DD');
       
-      const timeReport = await reportService.getTimeReport(start, end);
+      // Si es admin y hay un usuario seleccionado, usar ese usuario
+      // Si no es admin, usar siempre el usuario actual
+      const filterUserId = isAdmin ? (selectedUser || undefined) : user?.id;
+      
+      const timeReport = await reportService.getTimeReport(start, end, filterUserId, isAdmin);
       setTimeEntries([...timeReport.time_entries, ...timeReport.time_tracking]);
     } catch (error) {
       console.error('Error loading report data:', error);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, selectedUser, user?.id, isAdmin]);
 
   const loadData = useCallback(async () => {
     try {
+      // Si es admin y hay un usuario seleccionado, usar ese usuario
+      // Si no es admin, usar siempre el usuario actual
+      const filterUserId = isAdmin ? (selectedUser || undefined) : user?.id;
+      
       const [casesData, todosData] = await Promise.all([
-        caseService.getAll(user?.id, isAdmin),
-        todoService.getAll(user?.id, isAdmin),
+        caseService.getAll(filterUserId, isAdmin),
+        todoService.getAll(filterUserId, isAdmin),
       ]);
       setCases(casesData);
       setTodos(todosData);
     } catch (error) {
       console.error('Error loading data:', error);
     }
-  }, [user?.id, isAdmin]);
+  }, [selectedUser, user?.id, isAdmin]);
 
   const loadUsers = useCallback(async () => {
     try {
-      const usersData = await userService.getAll();
-      setUsers(usersData);
+      // Solo cargar usuarios si es admin
+      if (isAdmin) {
+        const usersData = await userService.getAll();
+        setUsers(usersData);
+      }
     } catch (error) {
       console.error('Error loading users:', error);
     }
-  }, []);
+  }, [isAdmin]);
 
   const loadApplications = useCallback(async () => {
     try {
@@ -334,22 +345,24 @@ const Reports: React.FC = () => {
                 slotProps={{ textField: { fullWidth: true } }}
               />
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth>
-                <InputLabel>Usuario</InputLabel>
-                <Select
-                  value={selectedUser}
-                  onChange={(e) => setSelectedUser(e.target.value)}
-                >
-                  <MenuItem value="">Todos</MenuItem>
-                  {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            {isAdmin && (
+              <Grid item xs={12} sm={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Usuario</InputLabel>
+                  <Select
+                    value={selectedUser}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    {users.map((user) => (
+                      <MenuItem key={user.id} value={user.id}>
+                        {user.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
                 <InputLabel>Aplicación</InputLabel>
