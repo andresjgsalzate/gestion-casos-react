@@ -33,6 +33,7 @@ import { toast } from 'react-toastify';
 import { userService, roleService } from '../../services/api';
 import { useReferentialIntegrity } from '../../hooks/useReferentialIntegrity';
 import { validatePassword } from '../../utils/passwordUtils';
+import { useAuthStore } from '../../store/authStore';
 import { User, Role, UserFormData } from '../../types';
 
 const UserManagement: React.FC = () => {
@@ -60,6 +61,7 @@ const UserManagement: React.FC = () => {
   });
 
   const { safeExecute } = useReferentialIntegrity();
+  const { user: currentUser } = useAuthStore();
 
   useEffect(() => {
     loadData();

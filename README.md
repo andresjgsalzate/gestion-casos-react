@@ -48,6 +48,16 @@ Un sistema completo de gestión de casos desarrollado con React, TypeScript y Su
 ### 🎨 **Interfaz de Usuario**
 - Diseño responsive con Material-UI
 - Modo oscuro/claro con toggle
+- Navegación intuitiva por módulos
+- Tooltips y ayudas contextuales
+
+### 🔍 **Auditoría y Trazabilidad**
+- Registro automático de todas las operaciones
+- Logs detallados de CRUD (Crear, Leer, Actualizar, Eliminar)
+- Dashboard de auditoría con filtros avanzados
+- Exportación de logs a CSV
+- Seguimiento de usuarios y actividades del sistema
+- **Nota**: Requiere configuración de políticas RLS en Supabase
 - Tema personalizable
 - Componentes reutilizables
 
@@ -264,6 +274,39 @@ Ver `src/types/index.ts` para todas las interfaces y tipos.
 2. **Permisos insuficientes**: Verificar configuración RLS
 3. **Datos no visibles**: Verificar aislamiento por usuario
 
+### ⚠️ Problema Conocido: Módulo de Auditoría
+
+**Síntoma**: El módulo de auditoría en Administración muestra datos de ejemplo en lugar de los registros reales de la base de datos.
+
+**Causa**: Row Level Security (RLS) en Supabase está bloqueando el acceso a la tabla `audit_logs`.
+
+**Diagnóstico**:
+- Los datos existen en la tabla (50+ registros verificados)
+- La aplicación recibe error 401 Unauthorized
+- No se pueden insertar ni leer registros desde la aplicación
+
+**Solución**:
+1. Acceder al editor SQL de Supabase
+2. Ejecutar el script `database/fix_rls_audit_logs.sql`
+3. O ejecutar manualmente estas políticas RLS:
+
+```sql
+-- Permitir lectura de logs de auditoría
+CREATE POLICY "audit_logs_select_policy" ON audit_logs
+    FOR SELECT 
+    USING (true);
+
+-- Permitir escritura de logs de auditoría  
+CREATE POLICY "audit_logs_insert_policy" ON audit_logs
+    FOR INSERT 
+    WITH CHECK (true);
+```
+
+**Estado Actual**: 
+- ✅ Módulo funcional con datos de ejemplo
+- ⚠️ Pendiente: Configurar políticas RLS en Supabase
+- ✅ Script de solución disponible
+
 ### Debug
 ```bash
 # Ver logs detallados
@@ -287,7 +330,7 @@ Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 
 ## 👥 Autores
 
-- **Desarrollador Principal** - [Tu Nombre](https://github.com/tu-usuario)
+- **Desarrollador Principal** - [Andres Jurgensen Alzate](https://github.com/andresjgsalzate)
 
 ## 🙏 Agradecimientos
 
@@ -299,7 +342,7 @@ Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 ## 📞 Soporte
 
 Para soporte y preguntas:
-- 📧 Email: soporte@tu-dominio.com
+- 📧 Email: andresjgsalzate@gmail.com
 - 💬 GitHub Issues: [Reportar problema](https://github.com/tu-usuario/gestion-casos-react/issues)
 - 📖 Documentación: [Wiki del proyecto](https://github.com/tu-usuario/gestion-casos-react/wiki)
 

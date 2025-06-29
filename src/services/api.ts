@@ -18,6 +18,51 @@ import {
   TodoFormData 
 } from '../types';
 
+// Función auxiliar para obtener el user_id actual
+const getCurrentUserId = (): string => {
+  try {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      const user = JSON.parse(currentUser);
+      if (user && user.id) {
+        return user.id;
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing current user from localStorage:', error);
+  }
+  
+  // Fallback: devolver 'system' en lugar de 'unknown' para indicar operación del sistema
+  return 'system';
+};
+
+// Función auxiliar para logging de auditoría con user_id robusto
+const logAuditAction = async (
+  table_name: string,
+  operation: 'INSERT' | 'UPDATE' | 'DELETE',
+  record_id: string,
+  description: string,
+  old_data?: any,
+  new_data?: any,
+  user_id?: string
+) => {
+  try {
+    const effectiveUserId = user_id || getCurrentUserId();
+    await auditService.createAuditLog({
+      table_name,
+      operation,
+      record_id,
+      user_id: effectiveUserId,
+      old_data,
+      new_data,
+      description
+    });
+  } catch (auditError) {
+    console.error('Error registrando auditoría:', auditError);
+    // No lanzar error para no afectar la operación principal
+  }
+};
+
 // Servicio de Usuarios
 export const userService = {
   async getAll(): Promise<User[]> {
@@ -103,16 +148,26 @@ export const userService = {
       throw new Error(error.message || 'Error al crear el usuario');
     }
     
-    // No devolver la contraseña en la respuesta
+    // Registrar la creación en el log de auditoría
     const { password, ...userWithoutPassword } = data;
+    await logAuditAction(
+      'users',
+      'INSERT',
+      data.id,
+      `Usuario creado: ${data.name} (${data.email})`,
+      undefined,
+      userWithoutPassword
+    );
+    
+    // No devolver la contraseña en la respuesta
     return userWithoutPassword as User;
   },
 
   async update(id: string, userData: Partial<UserFormData>): Promise<User> {
-    // Validar que el usuario existe
+    // Validar que el usuario existe y obtener datos anteriores para auditoría
     const { data: userExists, error: userExistsError } = await supabase
       .from('users')
-      .select('id')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -170,9 +225,20 @@ export const userService = {
       throw new Error(error.message || 'Error al actualizar el usuario');
     }
     
+    // Registrar la actualización en el log de auditoría
+    const { password: oldPassword, ...oldDataWithoutPassword } = userExists;
+    const { password: newPassword, ...newDataWithoutPassword } = data;
+    await logAuditAction(
+      'users',
+      'UPDATE',
+      id,
+      `Usuario actualizado: ${data.name} (${data.email})`,
+      oldDataWithoutPassword,
+      newDataWithoutPassword
+    );
+    
     // No devolver la contraseña en la respuesta
-    const { password, ...userWithoutPassword } = data;
-    return userWithoutPassword as User;
+    return newDataWithoutPassword as User;
   },
 
   async delete(id: string): Promise<void> {
@@ -244,20 +310,13 @@ export const userService = {
     }
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'users',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: userToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Usuario eliminado: ${userToDelete.name} (${userToDelete.email})`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-      // No lanzar error para no afectar la operación principal
-    }
+    await logAuditAction(
+      'users',
+      'DELETE',
+      id,
+      `Usuario eliminado: ${userToDelete.name} (${userToDelete.email})`,
+      userToDelete
+    );
   },
 
   async toggleActive(id: string, isActive: boolean): Promise<User> {
@@ -382,10 +441,32 @@ export const roleService = {
       .single();
     
     if (error) throw error;
+    
+    // Registrar la creación en el log de auditoría
+    await logAuditAction(
+      'roles',
+      'INSERT',
+      data.id,
+      `Rol creado: ${data.name} - ${data.description}`,
+      undefined,
+      data
+    );
+    
     return data;
   },
 
   async update(id: string, roleData: Partial<Role>): Promise<Role> {
+    // Obtener datos anteriores para auditoría
+    const { data: oldRole, error: oldRoleError } = await supabase
+      .from('roles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (oldRoleError || !oldRole) {
+      throw new Error('El rol especificado no existe');
+    }
+
     const { data, error } = await supabase
       .from('roles')
       .update(roleData)
@@ -394,6 +475,17 @@ export const roleService = {
       .single();
     
     if (error) throw error;
+    
+    // Registrar la actualización en el log de auditoría
+    await logAuditAction(
+      'roles',
+      'UPDATE',
+      id,
+      `Rol actualizado: ${data.name} - ${data.description}`,
+      oldRole,
+      data
+    );
+    
     return data;
   },
 
@@ -417,19 +509,13 @@ export const roleService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'roles',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: roleToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Rol eliminado: ${roleToDelete.name} - ${roleToDelete.description}`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    await logAuditAction(
+      'roles',
+      'DELETE',
+      id,
+      `Rol eliminado: ${roleToDelete.name} - ${roleToDelete.description}`,
+      roleToDelete
+    );
   },
 
   async assignPermissions(roleId: string, permissionIds: string[]): Promise<void> {
@@ -521,19 +607,13 @@ export const permissionService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'permissions',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: permissionToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Permiso eliminado: ${permissionToDelete.name} (${permissionToDelete.module}.${permissionToDelete.action})`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    await logAuditAction(
+      'permissions',
+      'DELETE',
+      id,
+      `Permiso eliminado: ${permissionToDelete.name} (${permissionToDelete.module}.${permissionToDelete.action})`,
+      permissionToDelete
+    );
   }
 };
 
@@ -592,19 +672,13 @@ export const applicationService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'applications',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: appToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Aplicación eliminada: ${appToDelete.name} - ${appToDelete.description}`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    await logAuditAction(
+      'applications',
+      'DELETE',
+      id,
+      `Aplicación eliminada: ${appToDelete.name} - ${appToDelete.description}`,
+      appToDelete
+    );
   }
 };
 
@@ -663,19 +737,13 @@ export const originService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'origins',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: originToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Origen eliminado: ${originToDelete.name} - ${originToDelete.description}`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    await logAuditAction(
+      'origins',
+      'DELETE',
+      id,
+      `Origen eliminado: ${originToDelete.name} - ${originToDelete.description}`,
+      originToDelete
+    );
   }
 };
 
@@ -734,19 +802,13 @@ export const priorityService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'priorities',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: priorityToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Prioridad eliminada: ${priorityToDelete.name} (Nivel ${priorityToDelete.level}) - ${priorityToDelete.description}`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    await logAuditAction(
+      'priorities',
+      'DELETE',
+      id,
+      `Prioridad eliminada: ${priorityToDelete.name} (Nivel ${priorityToDelete.level}) - ${priorityToDelete.description}`,
+      priorityToDelete
+    );
   }
 };
 
@@ -886,6 +948,18 @@ export const caseService = {
       console.error('Error creando caso:', error);
       throw new Error(error.message || 'Error al crear el caso');
     }
+    
+    // Registrar la creación en el log de auditoría
+    await logAuditAction(
+      'cases',
+      'INSERT',
+      data.id,
+      `Caso creado: ${data.case_number} - ${data.description?.substring(0, 100)}...`,
+      undefined,
+      data,
+      userId
+    );
+    
     return data;
   },
 
@@ -1013,19 +1087,13 @@ export const caseService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'cases',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: caseToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Caso eliminado: ${caseToDelete.case_number} - ${caseToDelete.description?.substring(0, 100)}...`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    await logAuditAction(
+      'cases',
+      'DELETE',
+      id,
+      `Caso eliminado: ${caseToDelete.case_number} - ${caseToDelete.description?.substring(0, 100)}...`,
+      caseToDelete
+    );
   },
 
   async updateStatus(id: string, status: Case['status']): Promise<Case> {
@@ -1280,19 +1348,13 @@ export const todoService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      await auditService.createAuditLog({
-        table_name: 'todos',
-        operation: 'DELETE',
-        record_id: id,
-        old_data: todoToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `TODO eliminado: ${todoToDelete.title} - ${todoToDelete.description?.substring(0, 100)}...`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    await logAuditAction(
+      'todos',
+      'DELETE',
+      id,
+      `TODO eliminado: ${todoToDelete.title} - ${todoToDelete.description?.substring(0, 100)}...`,
+      todoToDelete
+    );
   },
 
   async updateStatus(id: string, status: Todo['status']): Promise<Todo> {
@@ -1571,23 +1633,17 @@ export const timeService = {
     if (error) throw error;
 
     // Registrar la eliminación en el log de auditoría
-    try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      const relatedItem = type === 'case' 
-        ? timeEntryToDelete.cases?.case_number 
-        : timeEntryToDelete.todos?.title;
-      
-      await auditService.createAuditLog({
-        table_name: table,
-        operation: 'DELETE',
-        record_id: id,
-        old_data: timeEntryToDelete,
-        user_id: currentUser.id || 'unknown',
-        description: `Registro de tiempo eliminado del ${type === 'case' ? 'caso' : 'TODO'}: ${relatedItem} - Usuario: ${timeEntryToDelete.users?.name}`
-      });
-    } catch (auditError) {
-      console.error('Error registrando auditoría:', auditError);
-    }
+    const relatedItem = type === 'case' 
+      ? timeEntryToDelete.cases?.case_number 
+      : timeEntryToDelete.todos?.title;
+    
+    await logAuditAction(
+      table,
+      'DELETE',
+      id,
+      `Registro de tiempo eliminado del ${type === 'case' ? 'caso' : 'TODO'}: ${relatedItem} - Usuario: ${timeEntryToDelete.users?.name}`,
+      timeEntryToDelete
+    );
   }
 };
 
