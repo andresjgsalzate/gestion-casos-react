@@ -206,17 +206,21 @@ const TodoManagement: React.FC = () => {
   };
 
   const handleDelete = async (todoId: string) => {
-    if (window.confirm('¿Está seguro de eliminar este TODO?')) {
-      const result = await safeExecute(async () => {
-        await todoService.delete(todoId);
-        return true;
-      }, 'Eliminar TODO');
+    showConfirmDialog(
+      'Eliminar TODO',
+      '¿Está seguro de que desea eliminar este TODO? Esta acción no se puede deshacer',
+      async () => {
+        const result = await safeExecute(async () => {
+          await todoService.delete(todoId);
+          return true;
+        }, 'Eliminar TODO');
 
-      if (result) {
-        toast.success('TODO eliminado exitosamente');
-        loadData();
+        if (result) {
+          toast.success('TODO eliminado exitosamente');
+          loadData();
+        }
       }
-    }
+    );
   };
 
   const handleStatusChange = async (todoId: string, status: Todo['status']) => {

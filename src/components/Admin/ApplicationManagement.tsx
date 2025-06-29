@@ -25,7 +25,10 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Apps as AppsIcon
+  Apps as AppsIcon,
+  Warning as WarningIcon,
+  Check as CheckIcon,
+  Close as CancelIcon,
 } from '@mui/icons-material';
 import { Application } from '../../types';
 import { applicationService } from '../../services/api';
@@ -41,6 +44,17 @@ const ApplicationManagement: React.FC = () => {
     name: '',
     description: '',
     is_active: true
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   useEffect(() => {
@@ -130,20 +144,24 @@ const ApplicationManagement: React.FC = () => {
   };
 
   const handleDelete = async (application: Application) => {
-    if (!window.confirm(`¿Está seguro de eliminar la aplicación "${application.name}"?`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await applicationService.delete(application.id);
-      setSuccess('Aplicación eliminada exitosamente');
-      await loadApplications();
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar la aplicación');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: `¿Está seguro de eliminar la aplicación "${application.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await applicationService.delete(application.id);
+          setSuccess('Aplicación eliminada exitosamente');
+          await loadApplications();
+        } catch (err: any) {
+          setError(err.message || 'Error al eliminar la aplicación');
+        } finally {
+          setLoading(false);
+        }
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const handleToggleStatus = async (application: Application) => {
@@ -311,6 +329,38 @@ const ApplicationManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            startIcon={<CancelIcon />}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDialog.onConfirm}
+            variant="contained"
+            color="error"
+            startIcon={<CheckIcon />}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

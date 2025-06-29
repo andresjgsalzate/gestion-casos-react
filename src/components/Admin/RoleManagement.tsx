@@ -20,6 +20,9 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  Warning as WarningIcon,
+  Check as CheckIcon,
+  Close as CancelIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { toast } from 'react-toastify';
@@ -39,6 +42,17 @@ const RoleManagement: React.FC = () => {
     description: '',
   });
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     loadData();
@@ -143,16 +157,25 @@ const RoleManagement: React.FC = () => {
   };
 
   const handleDelete = async (roleId: string) => {
-    if (window.confirm('¿Está seguro de eliminar este rol?')) {
-      try {
-        await roleService.delete(roleId);
-        toast.success('Rol eliminado exitosamente');
-        loadData();
-      } catch (error) {
-        toast.error('Error al eliminar el rol');
-        console.error(error);
-      }
-    }
+    const role = roles.find(r => r.id === roleId);
+    const roleName = role?.name || 'este rol';
+    
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: `¿Está seguro de eliminar el rol "${roleName}"?`,
+      onConfirm: async () => {
+        try {
+          await roleService.delete(roleId);
+          toast.success('Rol eliminado exitosamente');
+          loadData();
+        } catch (error) {
+          toast.error('Error al eliminar el rol');
+          console.error(error);
+        }
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const handlePermissionChange = (permissionId: string, checked: boolean) => {
@@ -300,6 +323,38 @@ const RoleManagement: React.FC = () => {
           <Button onClick={handleCloseDialog}>Cancelar</Button>
           <Button onClick={handleSave} variant="contained">
             {selectedRole ? 'Actualizar' : 'Crear'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            startIcon={<CancelIcon />}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDialog.onConfirm}
+            variant="contained"
+            color="error"
+            startIcon={<CheckIcon />}
+          >
+            Eliminar
           </Button>
         </DialogActions>
       </Dialog>

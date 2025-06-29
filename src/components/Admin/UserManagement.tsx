@@ -23,6 +23,9 @@ import {
   Delete as DeleteIcon,
   ToggleOn as ActivateIcon,
   ToggleOff as DeactivateIcon,
+  Warning as WarningIcon,
+  Check as CheckIcon,
+  Close as CancelIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { toast } from 'react-toastify';
@@ -43,6 +46,17 @@ const UserManagement: React.FC = () => {
     name: '',
     role_id: '',
     password: '',
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   const { safeExecute } = useReferentialIntegrity();
@@ -153,17 +167,26 @@ const UserManagement: React.FC = () => {
   };
 
   const handleDelete = async (userId: string) => {
-    if (window.confirm('¿Está seguro de eliminar este usuario?')) {
-      const result = await safeExecute(async () => {
-        await userService.delete(userId);
-        return true;
-      }, 'Eliminar usuario');
+    const user = users.find(u => u.id === userId);
+    const userName = user?.name || 'este usuario';
+    
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: `¿Está seguro de eliminar el usuario "${userName}"?`,
+      onConfirm: async () => {
+        const result = await safeExecute(async () => {
+          await userService.delete(userId);
+          return true;
+        }, 'Eliminar usuario');
 
-      if (result) {
-        toast.success('Usuario eliminado exitosamente');
-        loadData();
-      }
-    }
+        if (result) {
+          toast.success('Usuario eliminado exitosamente');
+          loadData();
+        }
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
@@ -324,6 +347,38 @@ const UserManagement: React.FC = () => {
           <Button onClick={handleCloseDialog}>Cancelar</Button>
           <Button onClick={handleSave} variant="contained">
             {selectedUser ? 'Actualizar' : 'Crear'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            startIcon={<CancelIcon />}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDialog.onConfirm}
+            variant="contained"
+            color="error"
+            startIcon={<CheckIcon />}
+          >
+            Eliminar
           </Button>
         </DialogActions>
       </Dialog>

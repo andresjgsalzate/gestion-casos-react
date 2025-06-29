@@ -37,6 +37,9 @@ import {
   GetApp as ExportIcon,
   History as HistoryIcon,
   FilterList as FilterIcon,
+  Warning as WarningIcon,
+  Check as CheckIcon,
+  Close as CancelIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { toast } from 'react-toastify';
@@ -65,6 +68,12 @@ const CaseManagement: React.FC = () => {
   const [timeDialogOpen, setTimeDialogOpen] = useState(false);
   const [manualTimeDialogOpen, setManualTimeDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmDialogData, setConfirmDialogData] = useState({
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [selectedCaseForTime, setSelectedCaseForTime] = useState<Case | null>(null);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
@@ -182,17 +191,39 @@ const CaseManagement: React.FC = () => {
     }
   };
 
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialogData({
+      title,
+      message,
+      onConfirm
+    });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmDialogClose = () => {
+    setConfirmDialogOpen(false);
+  };
+
+  const handleConfirmDialogAccept = () => {
+    confirmDialogData.onConfirm();
+    setConfirmDialogOpen(false);
+  };
+
   const handleDelete = async (caseId: string) => {
-    if (window.confirm('¿Está seguro de eliminar este caso?')) {
-      try {
-        await caseService.delete(caseId, user?.id, isAdmin);
-        toast.success('Caso eliminado exitosamente');
-        loadData();
-      } catch (error) {
-        toast.error('Error al eliminar el caso');
-        console.error(error);
+    showConfirmDialog(
+      'Eliminar Caso',
+      '¿Está seguro de que desea eliminar este caso? Esta acción no se puede deshacer.',
+      async () => {
+        try {
+          await caseService.delete(caseId, user?.id, isAdmin);
+          toast.success('Caso eliminado exitosamente');
+          loadData();
+        } catch (error) {
+          toast.error('Error al eliminar el caso');
+          console.error(error);
+        }
       }
-    }
+    );
   };
 
   const handleStartTimer = async (caseId: string) => {
@@ -290,24 +321,28 @@ const CaseManagement: React.FC = () => {
   };
 
   const handleDeleteTimeEntry = async (timeEntryId: string) => {
-    if (window.confirm('¿Está seguro de eliminar este registro de tiempo?')) {
-      try {
-        const { error } = await supabase
-          .from('time_entries')
-          .delete()
-          .eq('id', timeEntryId);
+    showConfirmDialog(
+      'Eliminar Registro de Tiempo',
+      '¿Está seguro de que desea eliminar este registro de tiempo? Esta acción no se puede deshacer.',
+      async () => {
+        try {
+          const { error } = await supabase
+            .from('time_entries')
+            .delete()
+            .eq('id', timeEntryId);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        toast.success('Registro de tiempo eliminado exitosamente');
-        if (selectedCaseForTime) {
-          handleOpenTimeDialog(selectedCaseForTime);
+          toast.success('Registro de tiempo eliminado exitosamente');
+          if (selectedCaseForTime) {
+            handleOpenTimeDialog(selectedCaseForTime);
+          }
+        } catch (error) {
+          toast.error('Error al eliminar el registro de tiempo');
+          console.error(error);
         }
-      } catch (error) {
-        toast.error('Error al eliminar el registro de tiempo');
-        console.error(error);
       }
-    }
+    );
   };
 
   const exportToExcel = async () => {
@@ -953,6 +988,39 @@ const CaseManagement: React.FC = () => {
             startIcon={<ExportIcon />}
           >
             Exportar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de confirmación */}
+      <Dialog 
+        open={confirmDialogOpen} 
+        onClose={handleConfirmDialogClose}
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          {confirmDialogData.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialogData.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={handleConfirmDialogClose} 
+            variant="outlined"
+            startIcon={<CancelIcon />}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmDialogAccept} 
+            variant="contained" 
+            color="error"
+            startIcon={<CheckIcon />}
+          >
+            Confirmar
           </Button>
         </DialogActions>
       </Dialog>

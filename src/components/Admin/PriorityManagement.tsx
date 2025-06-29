@@ -30,7 +30,10 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  PriorityHigh as PriorityIcon
+  PriorityHigh as PriorityIcon,
+  Warning as WarningIcon,
+  Check as CheckIcon,
+  Close as CancelIcon,
 } from '@mui/icons-material';
 import { Priority } from '../../types';
 import { priorityService } from '../../services/api';
@@ -48,6 +51,17 @@ const PriorityManagement: React.FC = () => {
     level: 3,
     color: '#2196f3',
     is_active: true
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   const priorityLevels = [
@@ -161,20 +175,24 @@ const PriorityManagement: React.FC = () => {
   };
 
   const handleDelete = async (priority: Priority) => {
-    if (!window.confirm(`¿Está seguro de eliminar la prioridad "${priority.name}"?`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await priorityService.delete(priority.id);
-      setSuccess('Prioridad eliminada exitosamente');
-      await loadPriorities();
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar la prioridad');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: `¿Está seguro de eliminar la prioridad "${priority.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await priorityService.delete(priority.id);
+          setSuccess('Prioridad eliminada exitosamente');
+          await loadPriorities();
+        } catch (err: any) {
+          setError(err.message || 'Error al eliminar la prioridad');
+        } finally {
+          setLoading(false);
+        }
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const handleToggleStatus = async (priority: Priority) => {
@@ -404,6 +422,38 @@ const PriorityManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            startIcon={<CancelIcon />}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDialog.onConfirm}
+            variant="contained"
+            color="error"
+            startIcon={<CheckIcon />}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

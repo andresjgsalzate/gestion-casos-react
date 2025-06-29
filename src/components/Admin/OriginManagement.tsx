@@ -25,7 +25,10 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Source as SourceIcon
+  Source as SourceIcon,
+  Warning as WarningIcon,
+  Check as CheckIcon,
+  Close as CancelIcon,
 } from '@mui/icons-material';
 import { Origin } from '../../types';
 import { originService } from '../../services/api';
@@ -41,6 +44,17 @@ const OriginManagement: React.FC = () => {
     name: '',
     description: '',
     is_active: true
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   useEffect(() => {
@@ -130,20 +144,24 @@ const OriginManagement: React.FC = () => {
   };
 
   const handleDelete = async (origin: Origin) => {
-    if (!window.confirm(`¿Está seguro de eliminar el origen "${origin.name}"?`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await originService.delete(origin.id);
-      setSuccess('Origen eliminado exitosamente');
-      await loadOrigins();
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar el origen');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: `¿Está seguro de eliminar el origen "${origin.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await originService.delete(origin.id);
+          setSuccess('Origen eliminado exitosamente');
+          await loadOrigins();
+        } catch (err: any) {
+          setError(err.message || 'Error al eliminar el origen');
+        } finally {
+          setLoading(false);
+        }
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const handleToggleStatus = async (origin: Origin) => {
@@ -311,6 +329,38 @@ const OriginManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            startIcon={<CancelIcon />}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDialog.onConfirm}
+            variant="contained"
+            color="error"
+            startIcon={<CheckIcon />}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

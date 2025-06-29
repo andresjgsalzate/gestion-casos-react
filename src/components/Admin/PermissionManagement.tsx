@@ -28,7 +28,10 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  Warning as WarningIcon,
+  Check as CheckIcon,
+  Close as CancelIcon,
 } from '@mui/icons-material';
 import { Permission } from '../../types';
 import { permissionService } from '../../services/api';
@@ -45,6 +48,17 @@ const PermissionManagement: React.FC = () => {
     description: '',
     module: '',
     action: ''
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   const modules = [
@@ -166,20 +180,24 @@ const PermissionManagement: React.FC = () => {
   };
 
   const handleDelete = async (permission: Permission) => {
-    if (!window.confirm(`¿Está seguro de eliminar el permiso "${permission.name}"?`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await permissionService.delete(permission.id);
-      setSuccess('Permiso eliminado exitosamente');
-      await loadPermissions();
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar el permiso');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: `¿Está seguro de eliminar el permiso "${permission.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await permissionService.delete(permission.id);
+          setSuccess('Permiso eliminado exitosamente');
+          await loadPermissions();
+        } catch (err: any) {
+          setError(err.message || 'Error al eliminar el permiso');
+        } finally {
+          setLoading(false);
+        }
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const getModuleColor = (module: string | null) => {
@@ -402,6 +420,38 @@ const PermissionManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+            startIcon={<CancelIcon />}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDialog.onConfirm}
+            variant="contained"
+            color="error"
+            startIcon={<CheckIcon />}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
