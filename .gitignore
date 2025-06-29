@@ -130,3 +130,6 @@ firestore-debug.log
 
 # Sentry
 .sentryclirc
+
+# Local Netlify folder
+.netlify
