@@ -36,6 +36,21 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+// Componente para redirigir usuarios autenticados desde login
+const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuthStore();
+
+  if (loading) {
+    return <Loading />;
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 // Función para crear tema basado en el modo
 const createAppTheme = (isDarkMode: boolean) => createTheme({
   palette: {
@@ -166,7 +181,14 @@ const AppContent: React.FC = () => {
         <CssBaseline />
         <Router>
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route 
+              path="/login" 
+              element={
+                <AuthRedirect>
+                  <Login />
+                </AuthRedirect>
+              } 
+            />
             <Route
               path="/*"
               element={

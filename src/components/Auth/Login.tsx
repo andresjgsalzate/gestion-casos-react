@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Container,
-  Paper,
   TextField,
   Button,
   Typography,
@@ -31,8 +30,6 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      // Guardar usuario en localStorage para persistencia
-      localStorage.setItem('currentUser', JSON.stringify({ email }));
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Error de autenticación');
@@ -126,18 +123,6 @@ const Login: React.FC = () => {
                   'Iniciar Sesión'
                 )}
               </Button>
-            </Box>
-
-            <Box sx={{ mt: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
-                <strong>Usuario de prueba:</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
-                Email: andresjgsalzate@gmail.com
-              </Typography>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
-                Contraseña: cualquier contraseña
-              </Typography>
             </Box>
           </CardContent>
         </Card>
