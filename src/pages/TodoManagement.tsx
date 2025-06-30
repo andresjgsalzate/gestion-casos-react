@@ -38,6 +38,7 @@ import {
   Warning as WarningIcon,
   Check as CheckIcon,
   Close as CancelIcon,
+  Archive as ArchiveIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -53,6 +54,7 @@ import {
   caseService,
   timeService 
 } from '../services/api';
+import { ArchiveService } from '../services/archiveService';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
@@ -70,6 +72,7 @@ const TodoManagement: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [timeDialogOpen, setTimeDialogOpen] = useState(false);
   const [manualTimeDialogOpen, setManualTimeDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmDialogData, setConfirmDialogData] = useState({
     title: '',
@@ -78,6 +81,8 @@ const TodoManagement: React.FC = () => {
   });
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [selectedTodoForTime, setSelectedTodoForTime] = useState<Todo | null>(null);
+  const [selectedTodoForArchive, setSelectedTodoForArchive] = useState<Todo | null>(null);
+  const [archiveReason, setArchiveReason] = useState('');
   const [timeEntries, setTimeEntries] = useState<any[]>([]);
   const [timer, setTimer] = useState({ 
     running: false, 
@@ -399,6 +404,49 @@ const TodoManagement: React.FC = () => {
     );
   };
 
+  // Funciones para archivo manual de TODOs
+  const handleOpenArchiveDialog = (todoData: Todo) => {
+    // Validar que solo se puedan archivar TODOs completados
+    if (todoData.status !== 'COMPLETED') {
+      toast.error('Solo se pueden archivar TODOs con estado "COMPLETED"');
+      return;
+    }
+    
+    setSelectedTodoForArchive(todoData);
+    setArchiveReason('');
+    setArchiveDialogOpen(true);
+  };
+
+  const handleArchiveTodo = async () => {
+    try {
+      if (!selectedTodoForArchive || !user) return;
+      
+      if (!archiveReason.trim()) {
+        toast.error('Debe proporcionar una razón para archivar el TODO');
+        return;
+      }
+
+      const result = await ArchiveService.archiveTodo(
+        selectedTodoForArchive.id,
+        'MANUAL',
+        archiveReason.trim()
+      );
+
+      if (result.success) {
+        toast.success('TODO archivado exitosamente');
+        setArchiveDialogOpen(false);
+        setSelectedTodoForArchive(null);
+        setArchiveReason('');
+        loadData(); // Recargar la lista de TODOs
+      } else {
+        toast.error(result.error || 'Error al archivar el TODO');
+      }
+    } catch (error) {
+      toast.error('Error al archivar el TODO');
+      console.error(error);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'IN_PROGRESS': return 'primary';
@@ -476,7 +524,7 @@ const TodoManagement: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Acciones',
-      width: 200,
+      width: 240,
       renderCell: (params) => (
         <Box>
           <IconButton 
@@ -493,6 +541,16 @@ const TodoManagement: React.FC = () => {
           >
             <CompleteIcon />
           </IconButton>
+          {params.row.status === 'COMPLETED' && (
+            <IconButton 
+              size="small" 
+              onClick={() => handleOpenArchiveDialog(params.row)}
+              title="Archivar TODO"
+              color="warning"
+            >
+              <ArchiveIcon />
+            </IconButton>
+          )}
           <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
             <EditIcon />
           </IconButton>
@@ -921,6 +979,40 @@ const TodoManagement: React.FC = () => {
               startIcon={<CheckIcon />}
             >
               Confirmar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Dialog para archivo manual */}
+        <Dialog open={archiveDialogOpen} onClose={() => setArchiveDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            Archivar TODO - {selectedTodoForArchive?.title}
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              ¿Está seguro de que desea archivar este TODO? Esta acción no se puede deshacer.
+            </Typography>
+            <TextField
+              fullWidth
+              label="Razón del archivo"
+              value={archiveReason}
+              onChange={(e) => setArchiveReason(e.target.value)}
+              sx={{ mt: 2 }}
+              multiline
+              rows={3}
+              placeholder="Describa la razón por la cual se archiva este TODO..."
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setArchiveDialogOpen(false)}>Cancelar</Button>
+            <Button 
+              onClick={handleArchiveTodo} 
+              variant="contained"
+              color="primary"
+              startIcon={<ArchiveIcon />}
+              disabled={!archiveReason.trim()}
+            >
+              Archivar TODO
             </Button>
           </DialogActions>
         </Dialog>

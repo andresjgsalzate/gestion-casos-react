@@ -1,3 +1,25 @@
+-- ===============================
+-- SISTEMA DE GESTIÓN DE CASOS - CONFIGURACIÓN DE BASE DE DATOS
+-- ===============================
+-- 
+-- Este script configura la estructura principal de la base de datos.
+-- Incluye todas las tablas, funciones, triggers y políticas RLS necesarias.
+--
+-- MÓDULOS INCLUIDOS:
+-- ✅ Sistema de usuarios, roles y permisos
+-- ✅ Gestión de casos y TODOs
+-- ✅ Seguimiento de tiempo
+-- ✅ Sistema de auditoría
+-- ✅ Políticas de seguridad (RLS)
+--
+-- MÓDULO DE ARCHIVO:
+-- Para instalar el módulo de archivo, ejecutar después de este script:
+-- ✅ database/archive_module.sql (completamente autocontenido)
+--
+-- EJECUCIÓN:
+-- 1. Ejecutar este script completo en Supabase SQL Editor
+-- 2. Opcionalmente ejecutar archive_module.sql para funcionalidad de archivo
+--
 -- Script de configuración completa para la base de datos de Gestión de Casos
 -- Ejecutar en Supabase SQL Editor
 
@@ -288,7 +310,26 @@ INSERT INTO permissions (name, description, module, action) VALUES
 ('dashboard.read', 'Ver dashboard', 'dashboard', 'read'),
 
 -- Permisos de Administración
-('admin.full', 'Acceso completo de administración', 'admin', 'full');
+('admin.full', 'Acceso completo de administración', 'admin', 'full'),
+
+-- ===============================
+-- PERMISOS DE ARCHIVO
+-- ===============================
+-- Permisos del módulo de archivo
+('archive.view', 'Ver elementos archivados', 'archive', 'view'),
+('archive.create', 'Archivar elementos', 'archive', 'create'),
+('archive.restore', 'Restaurar elementos del archivo', 'archive', 'restore'),
+('archive.delete', 'Eliminar permanentemente elementos archivados', 'archive', 'delete'),
+('archive.search', 'Buscar en archivo', 'archive', 'search'),
+('archive.bulk_operations', 'Operaciones masivas de archivo', 'archive', 'bulk_operations'),
+('archive.manage_policies', 'Gestionar políticas de archivo', 'archive', 'manage_policies'),
+('archive.view_all', 'Ver todos los elementos archivados (admin)', 'archive', 'view_all'),
+('archive.manage_retention', 'Gestionar políticas de retención', 'archive', 'manage_retention'),
+('archive.view_logs', 'Ver logs de operaciones de archivo', 'archive', 'view_logs'),
+('archive.export', 'Exportar datos archivados', 'archive', 'export'),
+
+-- Permisos de auditoría extendidos para archivo
+('audit.archive_operations', 'Ver auditoría de operaciones de archivo', 'audit', 'archive_operations');
 
 -- Asignar TODOS los permisos al rol Administrador
 INSERT INTO role_permissions (role_id, permission_id)
@@ -308,7 +349,8 @@ WHERE name IN (
     'cases.create', 'cases.read', 'cases.update', 'cases.assign',
     'todos.create', 'todos.read', 'todos.update', 'todos.assign',
     'time.create', 'time.read', 'time.update',
-    'reports.read', 'reports.export', 'dashboard.read'
+    'reports.read', 'reports.export', 'dashboard.read',
+    'archive.view', 'archive.create', 'archive.restore', 'archive.search', 'archive.export'
 );
 
 -- Asignar permisos específicos al rol Analista
@@ -322,7 +364,8 @@ WHERE name IN (
     'cases.read', 'cases.update',
     'todos.create', 'todos.read', 'todos.update',
     'time.create', 'time.read', 'time.update',
-    'reports.read', 'dashboard.read'
+    'reports.read', 'dashboard.read',
+    'archive.view', 'archive.create', 'archive.search'
 );
 
 -- Asignar permisos básicos al rol Usuario
@@ -333,7 +376,8 @@ SELECT
 FROM permissions
 WHERE name IN (
     'applications.read', 'origins.read', 'priorities.read',
-    'cases.read', 'todos.read', 'time.read', 'dashboard.read'
+    'cases.read', 'todos.read', 'time.read', 'dashboard.read',
+    'archive.view', 'archive.search'
 );
 
 -- Insertar Aplicaciones por defecto
@@ -774,5 +818,27 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 COMMENT ON FUNCTION cleanup_audit_logs IS 'Elimina logs de auditoría más antiguos que el número especificado de días';
 
 -- ===============================
--- FIN DE SCRIPT DE AUDITORÍA
+-- FIN DE SCRIPT PRINCIPAL DE CONFIGURACIÓN
 -- ===============================
+
+-- ✅ CONFIGURACIÓN COMPLETA
+-- La base de datos está lista para usar con las siguientes funcionalidades:
+-- - Sistema de usuarios, roles y permisos
+-- - Gestión completa de casos y TODOs
+-- - Seguimiento de tiempo
+-- - Sistema de auditoría centralizado
+-- - Políticas de seguridad (RLS)
+
+-- 📁 MÓDULO DE ARCHIVO (OPCIONAL)
+-- Para habilitar funcionalidad de archivo, ejecutar:
+-- database/archive_module.sql
+
+-- 🔒 SEGURIDAD
+-- Todas las tablas tienen Row Level Security (RLS) habilitado
+-- Las políticas garantizan aislamiento de datos por usuario
+
+-- 📊 VERIFICACIÓN
+-- Para verificar la instalación:
+-- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
+
+SELECT '✅ Script de configuración principal completado exitosamente' as status;

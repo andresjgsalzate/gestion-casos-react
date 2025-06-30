@@ -40,6 +40,7 @@ import {
   Warning as WarningIcon,
   Check as CheckIcon,
   Close as CancelIcon,
+  Archive as ArchiveIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { toast } from 'react-toastify';
@@ -52,6 +53,7 @@ import {
   priorityService,
   timeService 
 } from '../services/api';
+import { ArchiveService } from '../services/archiveService';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
@@ -72,6 +74,7 @@ const CaseManagement: React.FC = () => {
   const [timeDialogOpen, setTimeDialogOpen] = useState(false);
   const [manualTimeDialogOpen, setManualTimeDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmDialogData, setConfirmDialogData] = useState({
     title: '',
@@ -80,6 +83,8 @@ const CaseManagement: React.FC = () => {
   });
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [selectedCaseForTime, setSelectedCaseForTime] = useState<Case | null>(null);
+  const [selectedCaseForArchive, setSelectedCaseForArchive] = useState<Case | null>(null);
+  const [archiveReason, setArchiveReason] = useState('');
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [exportMonth, setExportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [timer, setTimer] = useState({ 
@@ -383,6 +388,49 @@ const CaseManagement: React.FC = () => {
     );
   };
 
+  // Funciones para archivo manual
+  const handleOpenArchiveDialog = (caseData: Case) => {
+    // Validar que solo se puedan archivar casos terminados
+    if (caseData.status !== 'TERMINADA') {
+      toast.error('Solo se pueden archivar casos con estado "TERMINADA"');
+      return;
+    }
+    
+    setSelectedCaseForArchive(caseData);
+    setArchiveReason('');
+    setArchiveDialogOpen(true);
+  };
+
+  const handleArchiveCase = async () => {
+    try {
+      if (!selectedCaseForArchive || !user) return;
+      
+      if (!archiveReason.trim()) {
+        toast.error('Debe proporcionar una razón para archivar el caso');
+        return;
+      }
+
+      const result = await ArchiveService.archiveCase(
+        selectedCaseForArchive.id,
+        'MANUAL',
+        archiveReason.trim()
+      );
+
+      if (result.success) {
+        toast.success('Caso archivado exitosamente');
+        setArchiveDialogOpen(false);
+        setSelectedCaseForArchive(null);
+        setArchiveReason('');
+        loadData(); // Recargar la lista de casos
+      } else {
+        toast.error(result.error || 'Error al archivar el caso');
+      }
+    } catch (error) {
+      toast.error('Error al archivar el caso');
+      console.error(error);
+    }
+  };
+
   const exportToExcel = async () => {
     try {
       const exportData = await Promise.all(cases.map(async (caso) => {
@@ -600,7 +648,7 @@ const CaseManagement: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Acciones',
-      width: 280,
+      width: 320,
       renderCell: (params: any) => (
         <Box>
           <IconButton 
@@ -632,6 +680,16 @@ const CaseManagement: React.FC = () => {
           >
             <ExportIcon />
           </IconButton>
+          {params.row.status === 'TERMINADA' && (
+            <IconButton 
+              size="small" 
+              onClick={() => handleOpenArchiveDialog(params.row)}
+              title="Archivar Caso"
+              color="warning"
+            >
+              <ArchiveIcon />
+            </IconButton>
+          )}
           <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
             <EditIcon />
           </IconButton>
@@ -1059,6 +1117,36 @@ const CaseManagement: React.FC = () => {
             startIcon={<CheckIcon />}
           >
             Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para archivo manual */}
+      <Dialog open={archiveDialogOpen} onClose={() => setArchiveDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Archivar Caso - {selectedCaseForArchive?.case_number}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            ¿Está seguro de que desea archivar este caso? Esta acción no se puede deshacer.
+          </Typography>
+          <TextField
+            fullWidth
+            label="Razón del archivo"
+            value={archiveReason}
+            onChange={(e) => setArchiveReason(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchiveDialogOpen(false)}>Cancelar</Button>
+          <Button 
+            onClick={handleArchiveCase} 
+            variant="contained"
+            color="primary"
+            startIcon={<ArchiveIcon />}
+          >
+            Archivar Caso
           </Button>
         </DialogActions>
       </Dialog>

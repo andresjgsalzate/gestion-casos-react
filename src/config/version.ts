@@ -1,14 +1,35 @@
 export const VERSION_INFO = {
-  version: '1.2.0',
-  buildDate: '2025-06-30T00:52:38.994Z',
-  releaseDate: '2024-12-29',
-  codename: 'Dashboard Optimization',
+  version: '1.3.0',
+  buildDate: '2025-06-30T03:44:53.666Z',
+  releaseDate: '2025-06-29',
+  codename: 'Módulo de Archivo Completo',
   environment: process.env.NODE_ENV || 'development',
   commit: process.env.REACT_APP_GIT_SHA || 'local',
   branch: process.env.REACT_APP_GIT_BRANCH || 'main'
 };
 
 export const CHANGELOG = [
+  {
+    version: '1.3.0',
+    date: '2025-06-29',
+    title: 'Módulo de Archivo Completo',
+    changes: [
+      'Módulo de archivo completamente implementado y funcional',
+      'Archivo manual con confirmación y razón obligatoria para elementos completados',
+      'Sistema de restauración con auditoría completa integrada',
+      'Página de archivo dedicada (/archive) con interfaz especializada',
+      'Modal de detalle completo para elementos archivados (casos y TODOs)',
+      'Gestión de tipos mixtos con corrección de tipado para prioridades',
+      'Botones de archivo integrados en gestión de casos y TODOs',
+      'Validación de estados (solo TERMINADA/COMPLETED pueden archivarse)',
+      'Integración completa con sistema de auditoría centralizado',
+      'Trazabilidad total de operaciones de archivo y restauración',
+      'Scripts SQL preparados para corrección de funciones de restauración',
+      'Limpieza de archivos temporales y corrección de warnings',
+      'Documentación completa actualizada con nuevas funcionalidades'
+    ],
+    type: 'feature'
+  },
   {
     version: '1.2.0',
     date: '2024-12-29',

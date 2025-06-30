@@ -27,6 +27,7 @@ import {
   AccountCircle,
   Logout,
   Category as ClassificationIcon,
+  Archive as ArchiveIcon,
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
 } from '@mui/icons-material';
@@ -84,6 +85,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Clasificación de Casos', icon: <ClassificationIcon />, path: '/classification' },
     { text: 'Control de Casos', icon: <CaseIcon />, path: '/cases' },
     { text: 'TODOs', icon: <TodoIcon />, path: '/todos' },
+    { text: 'Archivo', icon: <ArchiveIcon />, path: '/archive' },
     { text: 'Reportes', icon: <ReportIcon />, path: '/reports' },
     { text: 'Administración', icon: <AdminIcon />, path: '/admin' },
   ];

@@ -41,6 +41,225 @@ export interface Permission {
   updated_at?: string;
 }
 
+// ==========================================
+// TIPOS PARA MÓDULO DE ARCHIVO
+// ==========================================
+
+export interface ArchivedCase {
+  id: string;
+  original_case_id: string;
+  case_number: string;
+  case_data: Case; // Datos completos del caso original
+  archived_at: string;
+  archived_by: string;
+  archive_reason: ArchiveReasonType;
+  archive_reason_text?: string;
+  retention_until: string;
+  retention_status: RetentionStatusType;
+  tags: string[];
+  reactivation_count: number;
+  last_reactivated_at?: string;
+  last_reactivated_by?: string;
+  is_legal_hold: boolean;
+  search_vector?: string;
+  created_at: string;
+  updated_at: string;
+  // Campos de JOIN
+  archived_by_user?: User;
+  reactivated_by_user?: User;
+}
+
+export interface ArchivedTodo {
+  id: string;
+  original_todo_id: string;
+  todo_data: Todo; // Datos completos del TODO original
+  case_id?: string;
+  archived_case_id?: string;
+  archived_at: string;
+  archived_by: string;
+  archive_reason: ArchiveReasonType;
+  archive_reason_text?: string;
+  retention_until: string;
+  retention_status: RetentionStatusType;
+  tags: string[];
+  is_legal_hold: boolean;
+  search_vector?: string;
+  created_at: string;
+  updated_at: string;
+  // Campos de JOIN
+  archived_by_user?: User;
+  archived_case?: ArchivedCase;
+}
+
+export interface ArchivePolicy {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  auto_archive_enabled: boolean;
+  days_after_completion?: number;
+  inactivity_days?: number;
+  default_retention_days: number;
+  apply_to_cases: boolean;
+  apply_to_todos: boolean;
+  conditions: Record<string, any>;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  // Campos de JOIN
+  created_by_user?: User;
+}
+
+export interface ArchiveOperationLog {
+  id: string;
+  operation_type: ArchiveOperationType;
+  item_type: 'CASE' | 'TODO';
+  item_id: string;
+  original_item_id?: string;
+  performed_by: string;
+  reason?: string;
+  operation_data: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  performed_at: string;
+  // Campos de JOIN
+  performed_by_user?: User;
+}
+
+export interface ArchiveNotification {
+  id: string;
+  notification_type: ArchiveNotificationType;
+  recipient_id: string;
+  item_type: 'CASE' | 'TODO';
+  item_id: string;
+  message: string;
+  sent_at?: string;
+  read_at?: string;
+  created_at: string;
+  // Campos de JOIN
+  recipient?: User;
+}
+
+// Enums para el módulo de archivo
+export type ArchiveReasonType = 
+  | 'MANUAL'
+  | 'AUTO_TIME_BASED'
+  | 'AUTO_INACTIVITY'
+  | 'POLICY_COMPLIANCE'
+  | 'BULK_OPERATION'
+  | 'USER_REQUEST'
+  | 'LEGAL_HOLD_EXPIRED'
+  | 'OTHER';
+
+export type RetentionStatusType = 
+  | 'ACTIVE'
+  | 'WARNING'
+  | 'EXPIRED'
+  | 'LEGAL_HOLD'
+  | 'PENDING_DELETION';
+
+export type ArchiveOperationType = 
+  | 'ARCHIVE'
+  | 'RESTORE'
+  | 'DELETE'
+  | 'BULK_ARCHIVE'
+  | 'PERMANENT_DELETE'
+  | 'POLICY_UPDATE'
+  | 'RETENTION_UPDATE';
+
+export type ArchiveNotificationType = 
+  | 'BEFORE_ARCHIVE'
+  | 'AFTER_ARCHIVE'
+  | 'BEFORE_DELETE'
+  | 'RETENTION_WARNING'
+  | 'RESTORE_NOTIFICATION';
+
+// Interfaces para filtros y criterios
+export interface ArchiveCriteria {
+  daysAfterCompletion?: number;
+  inactivityDays?: number;
+  priority?: string;
+  status?: string;
+  userId?: string;
+  applicationId?: string;
+  complexity?: string;
+}
+
+export interface ArchiveFilters {
+  startDate?: string;
+  endDate?: string;
+  archivedBy?: string;
+  archiveReason?: ArchiveReasonType;
+  retentionStatus?: RetentionStatusType;
+  searchQuery?: string;
+  itemType?: 'case' | 'todo';
+  tags?: string[];
+  isLegalHold?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface ArchiveSearchResult {
+  id: string;
+  type: 'case' | 'todo';
+  title: string;
+  case_number?: string;
+  archived_at: string;
+  archived_by: string;
+  archived_by_name?: string;
+  rank: number;
+  highlight?: string;
+}
+
+export interface ArchiveStats {
+  totalArchivedCases: number;
+  totalArchivedTodos: number;
+  archivesThisMonth: number;
+  nearingRetention: number;
+  reactivatedCases: number;
+  storageUsed?: string;
+  oldestArchived?: string;
+  retentionBreakdown?: {
+    active: number;
+    warning: number;
+    expired: number;
+    legalHold: number;
+  };
+}
+
+export interface ArchiveBulkOperation {
+  id: string;
+  operation_type: ArchiveOperationType;
+  criteria: ArchiveCriteria;
+  total_items: number;
+  processed_items: number;
+  successful_items: number;
+  failed_items: number;
+  started_at: string;
+  completed_at?: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  errors?: Array<{
+    item_id: string;
+    error_message: string;
+  }>;
+  created_by: string;
+}
+
+// Interfaces para configuración de archivo
+export interface ArchiveSettings {
+  autoArchiveEnabled: boolean;
+  defaultRetentionDays: number;
+  warningDaysBeforeExpiry: number;
+  allowUserArchive: boolean;
+  allowUserRestore: boolean;
+  requireReasonForArchive: boolean;
+  requireReasonForRestore: boolean;
+  enableNotifications: boolean;
+  enableLegalHold: boolean;
+  maxRetentionDays: number;
+  bulkOperationLimit: number;
+}
+
 export interface Application {
   id: string;
   name: string;

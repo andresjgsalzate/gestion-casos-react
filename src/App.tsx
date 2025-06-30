@@ -17,6 +17,7 @@ import CaseClassification from './pages/CaseClassification';
 import TodoManagement from './pages/TodoManagement';
 import Reports from './pages/Reports';
 import Administration from './pages/Administration';
+import Archive from './pages/Archive';
 import Profile from './pages/Profile';
 import Loading from './components/Common/Loading';
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -200,6 +201,7 @@ const AppContent: React.FC = () => {
                       <Route path="/cases" element={<CaseManagement />} />
                       <Route path="/classification" element={<CaseClassification />} />
                       <Route path="/todos" element={<TodoManagement />} />
+                      <Route path="/archive" element={<Archive />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/admin/*" element={<Administration />} />

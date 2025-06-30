@@ -1,4 +1,5 @@
-﻿// Servicios de API para la gestión de casos
+﻿/* eslint-disable unicode-bom */
+// Servicios de API para la gestión de casos
 import { supabase } from '../lib/supabase';
 import { hashPassword, verifyPassword } from '../utils/passwordUtils';
 import { logger } from '../utils/logger';

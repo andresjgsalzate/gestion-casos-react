@@ -14,6 +14,7 @@ import {
   Source as OriginIcon,
   Flag as PriorityIcon,
   History as AuditIcon,
+  Archive as ArchiveIcon,
 } from '@mui/icons-material';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 
@@ -25,6 +26,7 @@ import ApplicationManagement from '../components/Admin/ApplicationManagement';
 import OriginManagement from '../components/Admin/OriginManagement';
 import PriorityManagement from '../components/Admin/PriorityManagement';
 import AuditLogManagement from '../components/Admin/AuditLogManagement';
+import ArchiveManagement from '../components/Admin/ArchiveManagement';
 import { usePermissions } from '../hooks/usePermissions';
 
 const Administration: React.FC = () => {
@@ -42,7 +44,8 @@ const Administration: React.FC = () => {
     else if (path.includes('/applications')) setTabValue(3);
     else if (path.includes('/origins')) setTabValue(4);
     else if (path.includes('/priorities')) setTabValue(5);
-    else if (path.includes('/audit')) setTabValue(6);
+    else if (path.includes('/archive')) setTabValue(6);
+    else if (path.includes('/audit')) setTabValue(7);
   }, [location.pathname]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -56,6 +59,7 @@ const Administration: React.FC = () => {
       '/admin/applications',
       '/admin/origins',
       '/admin/priorities',
+      '/admin/archive',
       '/admin/audit'
     ];
     navigate(routes[newValue]);
@@ -90,6 +94,7 @@ const Administration: React.FC = () => {
             <Tab icon={<AppIcon />} label="Aplicaciones" />
             <Tab icon={<OriginIcon />} label="Orígenes" />
             <Tab icon={<PriorityIcon />} label="Prioridades" />
+            <Tab icon={<ArchiveIcon />} label="Archivo" />
             <Tab icon={<AuditIcon />} label="Auditoría" />
           </Tabs>
         </Box>
@@ -102,6 +107,7 @@ const Administration: React.FC = () => {
           <Route path="/applications" element={<ApplicationManagement />} />
           <Route path="/origins" element={<OriginManagement />} />
           <Route path="/priorities" element={<PriorityManagement />} />
+          <Route path="/archive" element={<ArchiveManagement />} />
           <Route path="/audit" element={<AuditLogManagement />} />
         </Routes>
       </Paper>

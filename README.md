@@ -45,6 +45,17 @@ Un sistema completo de gestión de casos desarrollado con React, TypeScript y Su
 - Gráficos de tendencias y distribución
 - Análisis de productividad por usuario (solo administradores)
 
+### 🗄️ **Módulo de Archivo**
+- **Archivo manual** - Solo por acción explícita del usuario con confirmación
+- **Sistema de restauración** - Reactivación completa con auditoría integrada
+- **Búsqueda avanzada** - Full-text search en contenido archivado
+- **Gestión de retención** - Políticas configurables y limpieza automática
+- **Control de acceso** - Permisos granulares por rol de usuario
+- **Auditoría completa** - Integración total con sistema de auditoría centralizado
+- **Trazabilidad total** - Registro detallado de operaciones de archivo/restauración
+- **Datos preservados** - Conservación completa de información original
+- **Interfaz dedicada** - Página especializada con filtros y estadísticas
+
 ### 🎨 **Interfaz de Usuario**
 - Diseño responsive con Material-UI
 - Modo oscuro/claro con toggle
@@ -136,8 +147,20 @@ REACT_APP_SUPABASE_ANON_KEY=tu_supabase_anon_key
 ```
 
 4. **Configurar la base de datos**
-- Ejecutar el script `database/setup.sql` en el editor SQL de Supabase
-- Configurar las políticas RLS según sea necesario
+
+   **Configuración Principal:**
+   ```sql
+   -- En el editor SQL de Supabase, ejecutar:
+   database/setup.sql
+   ```
+
+   **Módulo de Archivo (Opcional):**
+   ```sql
+   -- Para habilitar funcionalidad de archivo, ejecutar después del setup:
+   database/archive_module.sql
+   ```
+
+   **Nota**: El setup.sql incluye toda la configuración base necesaria. El módulo de archivo es completamente opcional y autocontenido.
 
 5. **Iniciar el servidor de desarrollo**
 ```bash
@@ -151,34 +174,25 @@ La aplicación estará disponible en `http://localhost:3000`
 ```
 src/
 ├── components/           # Componentes reutilizables
-│   ├── Admin/           # Componentes de administración
-│   │   ├── AuditLogManagement.tsx    # Dashboard de auditoría
-│   │   ├── UserManagement.tsx        # Gestión de usuarios
-│   │   ├── RoleManagement.tsx        # Gestión de roles
-│   │   └── ...                       # Otros módulos admin
-│   ├── Auth/            # Componentes de autenticación
+│   ├── Admin/           # Gestión administrativa
+│   ├── Auth/            # Autenticación
 │   ├── Common/          # Componentes comunes
 │   └── Layout/          # Layout principal
-├── hooks/              # Hooks personalizados
-│   └── usePermissions.ts             # Hook de permisos
-├── lib/                # Configuraciones de librerías
-│   └── supabase.ts                   # Cliente de Supabase
 ├── pages/              # Páginas principales
 │   ├── Administration.tsx            # Panel de administración
+│   ├── Archive.tsx                  # Módulo de archivo
 │   ├── CaseManagement.tsx           # Gestión de casos
 │   ├── TodoManagement.tsx           # Gestión de TODOs
 │   ├── Reports.tsx                  # Reportes y analytics
 │   └── Dashboard.tsx                # Dashboard principal
 ├── services/           # Servicios de API
-│   ├── api.ts                       # Servicios principales
+│   ├── api.ts                       # API principal
+│   ├── archiveService.ts            # Servicio de archivo
 │   └── auditService.ts              # Sistema de auditoría
-├── store/              # Store de estado global
-│   └── authStore.ts                 # Estado de autenticación
-├── types/              # Definiciones de TypeScript
-│   └── index.ts                     # Interfaces principales
+├── store/              # Estado global
+│   └── authStore.ts                 # Autenticación
+├── types/              # Definiciones TypeScript
 └── utils/              # Utilidades
-    ├── logger.ts                    # Sistema de logging
-    └── passwordUtils.ts             # Utilidades de contraseñas
 ```
 
 ## 🎯 Funcionalidades por Módulo
@@ -217,6 +231,24 @@ src/
 - Filtros por fecha, usuario, aplicación
 - Exportación a Excel
 - Gráficos de distribución y tendencias
+
+### 🗄️ Módulo de Archivo
+- **Página dedicada**: `/archive` con interfaz especializada
+- **Estadísticas visuales**: Cards con métricas clave del archivo
+- **Lista de archivados**: DataGrid con casos y TODOs archivados
+- **Búsqueda avanzada**: Filtros por tipo, fecha, usuario, razón
+- **Operaciones de archivo**:
+  - Archivo manual con razón obligatoria
+  - Restauración con seguimiento de reactivaciones
+  - Eliminación permanente (solo administradores)
+- **Gestión de retención**: Políticas automáticas de limpieza
+- **Auditoría completa**: Log de todas las operaciones
+- **Componentes especializados**:
+  - `ArchivedItemViewer`: Visualización detallada
+  - `ArchiveSettings`: Configuración de políticas
+  - `ArchiveSearch`: Búsqueda full-text avanzada
+- **Control de acceso granular**: Permisos específicos por rol
+- **Exportación**: Datos archivados a Excel/CSV
 
 ### ⚙️ Administración
 - Gestión de usuarios y roles
@@ -343,6 +375,23 @@ npm run build
 
 ## 📝 Changelog
 
+### v1.3.0 - Módulo de Archivo Completo (2025-06-29)
+- 🗄️ **Módulo de archivo completamente implementado**
+- ✅ **Archivo manual** con confirmación y razón obligatoria
+- ✅ **Sistema de restauración** con auditoría completa
+- ✅ **Página de archivo dedicada** con interfaz especializada
+- ✅ **Modal de detalle** para elementos archivados con información completa
+- ✅ **Gestión de tipos mixtos** (casos y TODOs) en archivo
+- ✅ **Botones de archivo** integrados en gestión de casos y TODOs
+- ✅ **Validación de estados** (solo TERMINADA/COMPLETED pueden archivarse)
+- ✅ **Autenticación personalizada** en archiveService.ts
+- ✅ **Corrección de errores de tipado** y compilación
+- ✅ **Limpieza de archivos temporales** y código legacy
+- 🔧 **Corrección del warning Unicode BOM** en api.ts
+- � **Integración completa con sistema de auditoría** - Trazabilidad total de operaciones
+- 📋 **Registro detallado** de archivos y restauraciones en dashboard de auditoría
+- �📚 **Documentación actualizada** con nuevas funcionalidades
+
 ### v1.2.0 - Dashboard Optimization (2024-12-29)
 - ✅ **Corregido el gráfico de actividad semanal** para mostrar datos reales
 - ✅ **Incluidos TODOs** en el cálculo de actividad semanal
@@ -363,11 +412,31 @@ npm run build
 ### v1.0.0 - Initial Release (2024-12-15)
 - 🎉 **Sistema completo de gestión de casos**
 - ✅ **Módulo de TODOs integrado**
-- 📊 **Dashboard con métricas y gráficos**
+- �️ **Módulo de archivo completo**
+- �📊 **Dashboard con métricas y gráficos**
 - 🔐 **Sistema de autenticación con Supabase**
 - 👥 **Gestión de usuarios y permisos**
 - ⏱️ **Seguimiento de tiempo por casos y TODOs**
 - 📈 **Reportes y exportación de datos**
+
+## 📚 Documentación
+
+### Base de Datos
+- **`database/setup.sql`**: Configuración principal completa
+- **`database/archive_module.sql`**: Módulo de archivo (opcional)
+
+### Configuración Principal
+- **`src/types/index.ts`**: Interfaces y tipos TypeScript
+- **`src/services/`**: Servicios de API y lógica de negocio
+- **`src/config/version.ts`**: Información de versión y changelog
+
+### Características Principales
+- ✅ **Sistema completo** de gestión de casos y TODOs
+- ✅ **Módulo de archivo** con auditoría integrada
+- ✅ **Dashboard avanzado** con métricas en tiempo real
+- ✅ **Sistema de auditoría** centralizado
+- ✅ **Autenticación segura** con Supabase
+- ✅ **Reportes y exportación** de datos
 
 ## 🤝 Contribuir
 
