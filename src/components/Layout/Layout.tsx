@@ -36,6 +36,7 @@ import { useSessionManager } from '../../hooks/useSessionManager';
 import { useTimerManager } from '../../hooks/useTimerManager';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import ActiveTimerIndicator from '../Common/ActiveTimerIndicator';
+import VersionDisplay from '../Common/VersionDisplay';
 
 const drawerWidth = 240;
 
@@ -88,14 +89,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   ];
 
   const drawer = (
-    <Box>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
           Gestión de Casos
         </Typography>
       </Toolbar>
       <Divider />
-      <List>
+      <List sx={{ flex: 1 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
@@ -108,6 +109,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </ListItem>
         ))}
       </List>
+      <Divider />
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+        <VersionDisplay showAsChip={true} />
+      </Box>
     </Box>
   );
 

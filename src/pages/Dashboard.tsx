@@ -32,6 +32,7 @@ import { caseService, todoService, timeService, applicationService, userService 
 import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
 import DataVisibilityInfo from '../components/Common/DataVisibilityInfo';
+import VersionDisplay from '../components/Common/VersionDisplay';
 
 ChartJS.register(
   CategoryScale,
@@ -661,6 +662,24 @@ const Dashboard: React.FC = () => {
           </>
         )}
       </Grid>
+
+      {/* Footer con información de versión */}
+      <Box 
+        sx={{ 
+          mt: 4, 
+          pt: 2, 
+          borderTop: '1px solid', 
+          borderColor: 'divider',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          © 2024 Sistema de Gestión de Casos
+        </Typography>
+        <VersionDisplay showAsChip={false} showBuildInfo={true} />
+      </Box>
     </Box>
   );
 };
