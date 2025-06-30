@@ -303,9 +303,59 @@ CREATE POLICY "audit_logs_insert_policy" ON audit_logs
 ```
 
 **Estado Actual**: 
-- ✅ Módulo funcional con datos de ejemplo
-- ⚠️ Pendiente: Configurar políticas RLS en Supabase
-- ✅ Script de solución disponible
+- ✅ Módulo funcional con datos reales de Supabase
+- ✅ Políticas RLS configuradas correctamente
+- ✅ Todos los campos se guardan apropiadamente
+- ✅ Modal de detalles con nombres legibles
+
+## 🔧 Logs de Auditoría - Mejoras Implementadas
+
+### ✅ Problema Resuelto: Campos NULL en audit_logs
+
+**Problemas identificados y resueltos:**
+
+1. **user_id NULL:** No se obtenía el usuario actual cuando no se proporcionaba explícitamente
+2. **ip_address NULL:** Servicio de IP pública fallaba sin fallback
+3. **user_agent NULL:** No se manejaba correctamente cuando no estaba disponible
+4. **Nombres de IDs:** Solo se mostraban IDs en lugar de nombres legibles
+
+### 🛠️ Soluciones Implementadas
+
+#### 1. Auto-detección de Usuario
+```typescript
+// Obtiene automáticamente el usuario de la sesión
+const { data: { user } } = await supabase.auth.getUser();
+userId = user?.id || null;
+```
+
+#### 2. Captura de IP con Fallback
+```typescript
+// Múltiples servicios para obtener IP
+try {
+  return await fetch('https://api.ipify.org?format=json');
+} catch {
+  return await fetch('https://httpbin.org/ip'); // Fallback
+}
+```
+
+#### 3. Modal con Nombres Legibles
+- **Creado por:** Muestra nombre + email del usuario
+- **Asignado a:** Información completa del usuario asignado  
+- **Prioridad:** Nombre y nivel de prioridad
+- **Aplicación/Origen:** Nombres descriptivos
+
+#### 4. Logging Detallado
+Se agregó logging completo para debugging y monitoreo de la creación de logs.
+
+### 📋 Testing y Verificación
+
+```typescript
+// Método de testing incluido
+await auditService.testAuditLog();
+
+// Verificar en Supabase o ejecutar:
+// database/verify_audit_logs_setup.sql
+```
 
 ### Debug
 ```bash

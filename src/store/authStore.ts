@@ -167,9 +167,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }
       }
 
-      console.log('Login attempt for:', email.toLowerCase().trim());
-      console.log('Supabase response:', { data: userData, error });
-
       if (error) {
         console.error('Supabase error details:', error);
         // Si hay un error 406 o similar, es probable que sea un problema de permisos/configuración

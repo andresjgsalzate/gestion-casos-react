@@ -32,8 +32,13 @@ import {
 } from '@mui/icons-material';
 import { Origin } from '../../types';
 import { originService } from '../../services/api';
+import { useAuditLogger } from '../../services/auditService';
+import { useAuthStore } from '../../store/authStore';
 
 const OriginManagement: React.FC = () => {
+  const { logAction } = useAuditLogger();
+  const { user } = useAuthStore();
+  
   const [origins, setOrigins] = useState<Origin[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,11 +131,40 @@ const OriginManagement: React.FC = () => {
         is_active: formData.is_active
       };
 
+      let originId: string;
+      
       if (editingOrigin) {
-        await originService.update(editingOrigin.id, originData);
+        const oldData = { ...editingOrigin };
+        const updatedOrigin = await originService.update(editingOrigin.id, originData);
+        originId = updatedOrigin.id;
+        
+        // Registrar auditoría para actualización
+        await logAction(
+          'origins',
+          'UPDATE',
+          originId,
+          user?.id,
+          `Origen actualizado: ${originData.name}`,
+          oldData,
+          originData
+        );
+        
         setSuccess('Origen actualizado exitosamente');
       } else {
-        await originService.create(originData);
+        const newOrigin = await originService.create(originData);
+        originId = newOrigin.id;
+        
+        // Registrar auditoría para creación
+        await logAction(
+          'origins',
+          'INSERT',
+          originId,
+          user?.id,
+          `Origen creado: ${originData.name}`,
+          undefined,
+          originData
+        );
+        
         setSuccess('Origen creado exitosamente');
       }
 
@@ -151,7 +185,20 @@ const OriginManagement: React.FC = () => {
       onConfirm: async () => {
         try {
           setLoading(true);
+          
           await originService.delete(origin.id);
+          
+          // Registrar auditoría para eliminación
+          await logAction(
+            'origins',
+            'DELETE',
+            origin.id,
+            user?.id,
+            `Origen eliminado: ${origin.name}`,
+            origin,
+            undefined
+          );
+          
           setSuccess('Origen eliminado exitosamente');
           await loadOrigins();
         } catch (err: any) {

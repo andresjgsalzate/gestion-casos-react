@@ -7,7 +7,7 @@ export interface AuditLogEntry {
   record_id: string;
   old_data?: Record<string, any>;
   new_data?: Record<string, any>;
-  user_id: string;
+  user_id: string | null;
   timestamp?: string;
   ip_address?: string;
   user_agent?: string;
@@ -220,6 +220,35 @@ class AuditService {
       limit,
       rlsError: true,
     };
+  }
+
+  // Resolver nombres de usuarios para mostrar en el UI
+  async resolveNames(userIds: string[]): Promise<Record<string, string>> {
+    try {
+      if (userIds.length === 0) {
+        return {};
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('id', userIds);
+
+      if (error) {
+        console.error('Error resolving user names:', error);
+        return {};
+      }
+
+      const nameMap: Record<string, string> = {};
+      data?.forEach(user => {
+        nameMap[user.id] = user.name;
+      });
+
+      return nameMap;
+    } catch (error) {
+      console.error('Error in resolveNames:', error);
+      return {};
+    }
   }
 
   // Obtener estadísticas de auditoría
@@ -447,18 +476,33 @@ export const auditService = new AuditService();
 export const useAuditLogger = () => {
   const logAction = async (
     table: string,
-    operation: 'INSERT' | 'UPDATE' | 'DELETE',
+    operation: 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT',
     recordId: string,
-    userId: string,
+    userId?: string | null,
     description?: string,
     oldData?: any,
     newData?: any
   ) => {
+    // Si no se proporciona userId, intentar obtenerlo del localStorage
+    let effectiveUserId = userId;
+    if (!effectiveUserId) {
+      try {
+        const currentUser = localStorage.getItem('currentUser');
+        if (currentUser) {
+          const user = JSON.parse(currentUser);
+          effectiveUserId = user?.id || null;
+        }
+      } catch (error) {
+        console.warn('Could not get user from localStorage:', error);
+        effectiveUserId = null;
+      }
+    }
+
     await auditService.createAuditLog({
       table_name: table,
       operation,
       record_id: recordId,
-      user_id: userId,
+      user_id: effectiveUserId || null,
       description,
       old_data: oldData,
       new_data: newData,

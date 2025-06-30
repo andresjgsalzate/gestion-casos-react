@@ -33,10 +33,14 @@ import { toast } from 'react-toastify';
 import { userService, roleService } from '../../services/api';
 import { useReferentialIntegrity } from '../../hooks/useReferentialIntegrity';
 import { validatePassword } from '../../utils/passwordUtils';
-import { useAuthStore } from '../../store/authStore';
 import { User, Role, UserFormData } from '../../types';
+import { useAuditLogger } from '../../services/auditService';
+import { useAuthStore } from '../../store/authStore';
 
 const UserManagement: React.FC = () => {
+  const { logAction } = useAuditLogger();
+  const { user } = useAuthStore();
+  
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +65,6 @@ const UserManagement: React.FC = () => {
   });
 
   const { safeExecute } = useReferentialIntegrity();
-  const { user: currentUser } = useAuthStore();
 
   useEffect(() => {
     loadData();
@@ -152,11 +155,22 @@ const UserManagement: React.FC = () => {
           updateData.password = formData.password;
         }
         
+        const oldData = { ...selectedUser };
         await userService.update(selectedUser.id, updateData);
+        
+        // Auditoría
+        await logAction('users', 'UPDATE', selectedUser.id, user?.id, 
+          `Usuario ${selectedUser.name} actualizado`, oldData, { ...oldData, ...updateData });
+        
         return 'actualizado';
       } else {
         // Al crear, todos los campos son requeridos
-        await userService.create(formData);
+        const newUser = await userService.create(formData);
+        
+        // Auditoría
+        await logAction('users', 'INSERT', newUser.id, user?.id, 
+          `Usuario ${formData.name} creado`, undefined, formData);
+        
         return 'creado';
       }
     }, 'Guardar usuario');
@@ -178,7 +192,15 @@ const UserManagement: React.FC = () => {
       message: `¿Está seguro de eliminar el usuario "${userName}"?`,
       onConfirm: async () => {
         const result = await safeExecute(async () => {
+          const userToDelete = users.find(u => u.id === userId);
           await userService.delete(userId);
+          
+          // Auditoría
+          if (userToDelete) {
+            await logAction('users', 'DELETE', userId, user?.id, 
+              `Usuario ${userToDelete.name} eliminado`, userToDelete, undefined);
+          }
+          
           return true;
         }, 'Eliminar usuario');
 
@@ -193,8 +215,20 @@ const UserManagement: React.FC = () => {
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
     const result = await safeExecute(async () => {
-      await userService.toggleActive(userId, !isActive);
-      return !isActive ? 'activado' : 'desactivado';
+      const userToUpdate = users.find(u => u.id === userId);
+      const newStatus = !isActive;
+      
+      await userService.toggleActive(userId, newStatus);
+      
+      // Auditoría
+      if (userToUpdate) {
+        await logAction('users', 'UPDATE', userId, user?.id, 
+          `Usuario ${userToUpdate.name} ${newStatus ? 'activado' : 'desactivado'}`, 
+          { ...userToUpdate, is_active: isActive }, 
+          { ...userToUpdate, is_active: newStatus });
+      }
+      
+      return newStatus ? 'activado' : 'desactivado';
     }, 'Cambiar estado de usuario');
 
     if (result) {

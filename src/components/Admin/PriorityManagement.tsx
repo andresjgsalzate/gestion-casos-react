@@ -37,8 +37,13 @@ import {
 } from '@mui/icons-material';
 import { Priority } from '../../types';
 import { priorityService } from '../../services/api';
+import { useAuditLogger } from '../../services/auditService';
+import { useAuthStore } from '../../store/authStore';
 
 const PriorityManagement: React.FC = () => {
+  const { logAction } = useAuditLogger();
+  const { user } = useAuthStore();
+  
   const [priorities, setPriorities] = useState<Priority[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -157,11 +162,40 @@ const PriorityManagement: React.FC = () => {
         is_active: formData.is_active
       };
 
+      let priorityId: string;
+      
       if (editingPriority) {
-        await priorityService.update(editingPriority.id, priorityData);
+        const oldData = { ...editingPriority };
+        const updatedPriority = await priorityService.update(editingPriority.id, priorityData);
+        priorityId = updatedPriority.id;
+        
+        // Registrar auditoría para actualización
+        await logAction(
+          'priorities',
+          'UPDATE',
+          priorityId,
+          user?.id,
+          `Prioridad actualizada: ${priorityData.name}`,
+          oldData,
+          priorityData
+        );
+        
         setSuccess('Prioridad actualizada exitosamente');
       } else {
-        await priorityService.create(priorityData);
+        const newPriority = await priorityService.create(priorityData);
+        priorityId = newPriority.id;
+        
+        // Registrar auditoría para creación
+        await logAction(
+          'priorities',
+          'INSERT',
+          priorityId,
+          user?.id,
+          `Prioridad creada: ${priorityData.name}`,
+          undefined,
+          priorityData
+        );
+        
         setSuccess('Prioridad creada exitosamente');
       }
 
@@ -182,7 +216,20 @@ const PriorityManagement: React.FC = () => {
       onConfirm: async () => {
         try {
           setLoading(true);
+          
           await priorityService.delete(priority.id);
+          
+          // Registrar auditoría para eliminación
+          await logAction(
+            'priorities',
+            'DELETE',
+            priority.id,
+            user?.id,
+            `Prioridad eliminada: ${priority.name}`,
+            priority,
+            undefined
+          );
+          
           setSuccess('Prioridad eliminada exitosamente');
           await loadPriorities();
         } catch (err: any) {

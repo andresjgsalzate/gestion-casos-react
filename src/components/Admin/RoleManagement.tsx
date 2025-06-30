@@ -29,8 +29,13 @@ import { toast } from 'react-toastify';
 
 import { roleService, permissionService } from '../../services/api';
 import { Role, Permission } from '../../types';
+import { useAuditLogger } from '../../services/auditService';
+import { useAuthStore } from '../../store/authStore';
 
 const RoleManagement: React.FC = () => {
+  const { logAction } = useAuditLogger();
+  const { user } = useAuthStore();
+  
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,16 +137,42 @@ const RoleManagement: React.FC = () => {
   const handleSave = async () => {
     try {
       let roleId: string;
+      let oldData: any = null;
       
       if (selectedRole) {
+        oldData = { ...selectedRole };
         const updatedRole = await roleService.update(selectedRole.id, formData);
         roleId = updatedRole.id;
+        
+        // Registrar auditoría para actualización
+        await logAction(
+          'roles',
+          'UPDATE',
+          roleId,
+          user?.id,
+          `Rol actualizado: ${formData.name}`,
+          oldData,
+          formData
+        );
+        
         toast.success('Rol actualizado exitosamente');
       } else {
         const newRole = await roleService.create({
           ...formData
         });
         roleId = newRole.id;
+        
+        // Registrar auditoría para creación
+        await logAction(
+          'roles',
+          'INSERT',
+          roleId,
+          user?.id,
+          `Rol creado: ${formData.name}`,
+          undefined,
+          formData
+        );
+        
         toast.success('Rol creado exitosamente');
       }
 
@@ -166,7 +197,22 @@ const RoleManagement: React.FC = () => {
       message: `¿Está seguro de eliminar el rol "${roleName}"?`,
       onConfirm: async () => {
         try {
+          // Guardar datos del rol antes de eliminarlo para auditoría
+          const roleToDelete = roles.find(r => r.id === roleId);
+          
           await roleService.delete(roleId);
+          
+          // Registrar auditoría para eliminación
+          await logAction(
+            'roles',
+            'DELETE',
+            roleId,
+            user?.id,
+            `Rol eliminado: ${roleName}`,
+            roleToDelete,
+            undefined
+          );
+          
           toast.success('Rol eliminado exitosamente');
           loadData();
         } catch (error) {

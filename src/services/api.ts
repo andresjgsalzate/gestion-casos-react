@@ -1,7 +1,8 @@
+﻿// Servicios de API para la gestión de casos
 import { supabase } from '../lib/supabase';
 import { hashPassword, verifyPassword } from '../utils/passwordUtils';
 import { logger } from '../utils/logger';
-import { auditService } from './auditService';
+// import { auditService } from './auditService'; // REMOVIDO: auditoría manejada en componentes
 import { 
   User, 
   Role, 
@@ -18,50 +19,26 @@ import {
   TodoFormData 
 } from '../types';
 
-// Función auxiliar para obtener el user_id actual
-const getCurrentUserId = (): string => {
-  try {
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const user = JSON.parse(currentUser);
-      if (user && user.id) {
-        return user.id;
-      }
-    }
-  } catch (error) {
-    console.error('Error parsing current user from localStorage:', error);
-  }
-  
-  // Fallback: devolver 'system' en lugar de 'unknown' para indicar operación del sistema
-  return 'system';
-};
+// NOTA: Función getCurrentUserId comentada ya que la auditoría se maneja en componentes
+// const getCurrentUserId = (): string => {
+//   try {
+//     const currentUser = localStorage.getItem('currentUser');
+//     if (currentUser) {
+//       const user = JSON.parse(currentUser);
+//       if (user && user.id) {
+//         return user.id;
+//       }
+//     }
+//   } catch (error) {
+//     console.error('Error parsing current user from localStorage:', error);
+//   }
+//   
+//   return 'system';
+// };
 
-// Función auxiliar para logging de auditoría con user_id robusto
-const logAuditAction = async (
-  table_name: string,
-  operation: 'INSERT' | 'UPDATE' | 'DELETE',
-  record_id: string,
-  description: string,
-  old_data?: any,
-  new_data?: any,
-  user_id?: string
-) => {
-  try {
-    const effectiveUserId = user_id || getCurrentUserId();
-    await auditService.createAuditLog({
-      table_name,
-      operation,
-      record_id,
-      user_id: effectiveUserId,
-      old_data,
-      new_data,
-      description
-    });
-  } catch (auditError) {
-    console.error('Error registrando auditoría:', auditError);
-    // No lanzar error para no afectar la operación principal
-  }
-};
+// NOTA: Función logAuditAction REMOVIDA para evitar auditoría duplicada
+// La auditoría se maneja ahora exclusivamente en los componentes
+// para evitar registros duplicados y tener mejor control del contexto de usuario
 
 // Servicio de Usuarios
 export const userService = {
@@ -114,7 +91,7 @@ export const userService = {
       }
     }
 
-    // Validar que el email no esté duplicado
+    // Validar que el email no estÃ© duplicado
     const { data: emailExists, error: emailError } = await supabase
       .from('users')
       .select('id')
@@ -125,11 +102,11 @@ export const userService = {
       throw new Error('Ya existe un usuario con este email');
     }
 
-    // Hashear la contraseña antes de guardar
+    // Hashear la contraseÃ±a antes de guardar
     const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
     
     if (!hashedPassword) {
-      throw new Error('La contraseña es requerida');
+      throw new Error('La contraseÃ±a es requerida');
     }
 
     const userDataWithHashedPassword = {
@@ -148,23 +125,15 @@ export const userService = {
       throw new Error(error.message || 'Error al crear el usuario');
     }
     
-    // Registrar la creación en el log de auditoría
+    // AuditorÃ­a manejada en el componente para evitar duplicados
     const { password, ...userWithoutPassword } = data;
-    await logAuditAction(
-      'users',
-      'INSERT',
-      data.id,
-      `Usuario creado: ${data.name} (${data.email})`,
-      undefined,
-      userWithoutPassword
-    );
     
-    // No devolver la contraseña en la respuesta
+    // No devolver la contraseÃ±a en la respuesta
     return userWithoutPassword as User;
   },
 
   async update(id: string, userData: Partial<UserFormData>): Promise<User> {
-    // Validar que el usuario existe y obtener datos anteriores para auditoría
+    // Validar que el usuario existe y obtener datos anteriores para auditorÃ­a
     const { data: userExists, error: userExistsError } = await supabase
       .from('users')
       .select('*')
@@ -175,7 +144,7 @@ export const userService = {
       throw new Error('El usuario especificado no existe');
     }
 
-    // Validar que el rol existe si se está actualizando
+    // Validar que el rol existe si se estÃ¡ actualizando
     if (userData.role_id) {
       const { data: roleExists, error: roleError } = await supabase
         .from('roles')
@@ -188,7 +157,7 @@ export const userService = {
       }
     }
 
-    // Validar que el email no esté duplicado por otro usuario
+    // Validar que el email no estÃ© duplicado por otro usuario
     if (userData.email) {
       const { data: emailExists, error: emailError } = await supabase
         .from('users')
@@ -202,14 +171,14 @@ export const userService = {
       }
     }
 
-    // Preparar datos para actualización
+    // Preparar datos para actualizaciÃ³n
     const updateData: any = { ...userData };
     
-    // Si se proporciona una nueva contraseña, hashearla
+    // Si se proporciona una nueva contraseÃ±a, hashearla
     if (userData.password && userData.password.trim()) {
       updateData.password = await hashPassword(userData.password);
     } else {
-      // Si no se proporciona contraseña, no la actualizamos
+      // Si no se proporciona contraseÃ±a, no la actualizamos
       delete updateData.password;
     }
 
@@ -225,17 +194,8 @@ export const userService = {
       throw new Error(error.message || 'Error al actualizar el usuario');
     }
     
-    // Registrar la actualización en el log de auditoría
-    const { password: oldPassword, ...oldDataWithoutPassword } = userExists;
+    // Auditoría manejada en el componente para evitar duplicados
     const { password: newPassword, ...newDataWithoutPassword } = data;
-    await logAuditAction(
-      'users',
-      'UPDATE',
-      id,
-      `Usuario actualizado: ${data.name} (${data.email})`,
-      oldDataWithoutPassword,
-      newDataWithoutPassword
-    );
     
     // No devolver la contraseña en la respuesta
     return newDataWithoutPassword as User;
@@ -309,14 +269,7 @@ export const userService = {
       throw new Error(error.message || 'Error al eliminar el usuario');
     }
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'users',
-      'DELETE',
-      id,
-      `Usuario eliminado: ${userToDelete.name} (${userToDelete.email})`,
-      userToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   },
 
   async toggleActive(id: string, isActive: boolean): Promise<User> {
@@ -333,7 +286,7 @@ export const userService = {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     try {
-      // Obtener el usuario actual del store (autenticación personalizada)
+      // Obtener el usuario actual del store (autenticaciÃ³n personalizada)
       const storedUser = localStorage.getItem('currentUser');
       if (!storedUser) {
         throw new Error('Usuario no autenticado');
@@ -344,7 +297,7 @@ export const userService = {
         throw new Error('Usuario no autenticado');
       }
 
-      // Obtener el usuario completo de la base de datos para verificar la contraseña
+      // Obtener el usuario completo de la base de datos para verificar la contraseÃ±a
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, email, password')
@@ -356,17 +309,17 @@ export const userService = {
         throw new Error('Usuario no encontrado');
       }
 
-      // Verificar la contraseña actual
+      // Verificar la contraseÃ±a actual
       const isCurrentPasswordValid = await verifyPassword(currentPassword, userData.password);
       
       if (!isCurrentPasswordValid) {
-        throw new Error('La contraseña actual es incorrecta');
+        throw new Error('La contraseÃ±a actual es incorrecta');
       }
 
-      // Hash de la nueva contraseña
+      // Hash de la nueva contraseÃ±a
       const newPasswordHash = await hashPassword(newPassword);
 
-      // Actualizar la contraseña en la base de datos
+      // Actualizar la contraseÃ±a en la base de datos
       const { error: updateError } = await supabase
         .from('users')
         .update({ 
@@ -377,7 +330,7 @@ export const userService = {
 
       if (updateError) {
         logger.error('Error updating password:', updateError);
-        throw new Error(updateError.message || 'Error al cambiar la contraseña');
+        throw new Error(updateError.message || 'Error al cambiar la contraseÃ±a');
       }
 
       logger.info('Password changed successfully for user:', user.id);
@@ -442,21 +395,13 @@ export const roleService = {
     
     if (error) throw error;
     
-    // Registrar la creación en el log de auditoría
-    await logAuditAction(
-      'roles',
-      'INSERT',
-      data.id,
-      `Rol creado: ${data.name} - ${data.description}`,
-      undefined,
-      data
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
     
     return data;
   },
 
   async update(id: string, roleData: Partial<Role>): Promise<Role> {
-    // Obtener datos anteriores para auditoría
+    // Obtener datos anteriores para auditorÃ­a
     const { data: oldRole, error: oldRoleError } = await supabase
       .from('roles')
       .select('*')
@@ -476,21 +421,13 @@ export const roleService = {
     
     if (error) throw error;
     
-    // Registrar la actualización en el log de auditoría
-    await logAuditAction(
-      'roles',
-      'UPDATE',
-      id,
-      `Rol actualizado: ${data.name} - ${data.description}`,
-      oldRole,
-      data
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
     
     return data;
   },
 
   async delete(id: string): Promise<void> {
-    // Obtener los datos del rol antes de eliminarlo para auditoría
+    // Obtener los datos del rol antes de eliminarlo para auditorÃ­a
     const { data: roleToDelete, error: getRoleError } = await supabase
       .from('roles')
       .select('*')
@@ -508,14 +445,7 @@ export const roleService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'roles',
-      'DELETE',
-      id,
-      `Rol eliminado: ${roleToDelete.name} - ${roleToDelete.description}`,
-      roleToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   },
 
   async assignPermissions(roleId: string, permissionIds: string[]): Promise<void> {
@@ -588,7 +518,7 @@ export const permissionService = {
   },
 
   async delete(id: string): Promise<void> {
-    // Obtener los datos del permiso antes de eliminarlo para auditoría
+    // Obtener los datos del permiso antes de eliminarlo para auditorÃ­a
     const { data: permissionToDelete, error: getPermissionError } = await supabase
       .from('permissions')
       .select('*')
@@ -606,14 +536,7 @@ export const permissionService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'permissions',
-      'DELETE',
-      id,
-      `Permiso eliminado: ${permissionToDelete.name} (${permissionToDelete.module}.${permissionToDelete.action})`,
-      permissionToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   }
 };
 
@@ -653,7 +576,7 @@ export const applicationService = {
   },
 
   async delete(id: string): Promise<void> {
-    // Obtener los datos de la aplicación antes de eliminarla para auditoría
+    // Obtener los datos de la aplicaciÃ³n antes de eliminarla para auditorÃ­a
     const { data: appToDelete, error: getAppError } = await supabase
       .from('applications')
       .select('*')
@@ -661,7 +584,7 @@ export const applicationService = {
       .single();
 
     if (getAppError || !appToDelete) {
-      throw new Error('La aplicación especificada no existe');
+      throw new Error('La aplicaciÃ³n especificada no existe');
     }
 
     const { error } = await supabase
@@ -671,18 +594,11 @@ export const applicationService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'applications',
-      'DELETE',
-      id,
-      `Aplicación eliminada: ${appToDelete.name} - ${appToDelete.description}`,
-      appToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   }
 };
 
-// Servicio de Orígenes
+// Servicio de OrÃ­genes
 export const originService = {
   async getAll(): Promise<Origin[]> {
     const { data, error } = await supabase
@@ -718,7 +634,7 @@ export const originService = {
   },
 
   async delete(id: string): Promise<void> {
-    // Obtener los datos del origen antes de eliminarlo para auditoría
+    // Obtener los datos del origen antes de eliminarlo para auditorÃ­a
     const { data: originToDelete, error: getOriginError } = await supabase
       .from('origins')
       .select('*')
@@ -736,14 +652,7 @@ export const originService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'origins',
-      'DELETE',
-      id,
-      `Origen eliminado: ${originToDelete.name} - ${originToDelete.description}`,
-      originToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   }
 };
 
@@ -783,7 +692,7 @@ export const priorityService = {
   },
 
   async delete(id: string): Promise<void> {
-    // Obtener los datos de la prioridad antes de eliminarla para auditoría
+    // Obtener los datos de la prioridad antes de eliminarla para auditorÃ­a
     const { data: priorityToDelete, error: getPriorityError } = await supabase
       .from('priorities')
       .select('*')
@@ -801,14 +710,7 @@ export const priorityService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'priorities',
-      'DELETE',
-      id,
-      `Prioridad eliminada: ${priorityToDelete.name} (Nivel ${priorityToDelete.level}) - ${priorityToDelete.description}`,
-      priorityToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   }
 };
 
@@ -860,7 +762,7 @@ export const caseService = {
     const { data, error } = await query.single();
     
     if (error) {
-      // Si es error de no encontrado y no es admin, podría ser que no tiene permisos
+      // Si es error de no encontrado y no es admin, podrÃ­a ser que no tiene permisos
       if (error.code === 'PGRST116' && !isAdmin) {
         throw new Error('No tienes permisos para ver este caso o el caso no existe');
       }
@@ -879,10 +781,10 @@ export const caseService = {
       .single();
 
     if (userError || !userExists) {
-      throw new Error('El usuario especificado no existe o no está activo');
+      throw new Error('El usuario especificado no existe o no estÃ¡ activo');
     }
 
-    // Validar que la aplicación existe y está activa
+    // Validar que la aplicaciÃ³n existe y estÃ¡ activa
     if (caseData.application_id) {
       const { data: appExists, error: appError } = await supabase
         .from('applications')
@@ -892,11 +794,11 @@ export const caseService = {
         .single();
 
       if (appError || !appExists) {
-        throw new Error('La aplicación especificada no existe o no está activa');
+        throw new Error('La aplicaciÃ³n especificada no existe o no estÃ¡ activa');
       }
     }
 
-    // Validar que el origen existe y está activo
+    // Validar que el origen existe y estÃ¡ activo
     if (caseData.origin_id) {
       const { data: originExists, error: originError } = await supabase
         .from('origins')
@@ -906,11 +808,11 @@ export const caseService = {
         .single();
 
       if (originError || !originExists) {
-        throw new Error('El origen especificado no existe o no está activo');
+        throw new Error('El origen especificado no existe o no estÃ¡ activo');
       }
     }
 
-    // Validar que la prioridad existe y está activa
+    // Validar que la prioridad existe y estÃ¡ activa
     if (caseData.priority_id) {
       const { data: priorityExists, error: priorityError } = await supabase
         .from('priorities')
@@ -920,11 +822,11 @@ export const caseService = {
         .single();
 
       if (priorityError || !priorityExists) {
-        throw new Error('La prioridad especificada no existe o no está activa');
+        throw new Error('La prioridad especificada no existe o no estÃ¡ activa');
       }
     }
 
-    // Validar que el número de caso no esté duplicado
+    // Validar que el nÃºmero de caso no estÃ© duplicado
     const { data: caseExists, error: caseExistsError } = await supabase
       .from('cases')
       .select('id')
@@ -932,7 +834,7 @@ export const caseService = {
       .single();
 
     if (!caseExistsError && caseExists) {
-      throw new Error('Ya existe un caso con este número');
+      throw new Error('Ya existe un caso con este nÃºmero');
     }
 
     const { data, error } = await supabase
@@ -949,16 +851,7 @@ export const caseService = {
       throw new Error(error.message || 'Error al crear el caso');
     }
     
-    // Registrar la creación en el log de auditoría
-    await logAuditAction(
-      'cases',
-      'INSERT',
-      data.id,
-      `Caso creado: ${data.case_number} - ${data.description?.substring(0, 100)}...`,
-      undefined,
-      data,
-      userId
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
     
     return data;
   },
@@ -984,7 +877,7 @@ export const caseService = {
       throw new Error('El caso especificado no existe');
     }
 
-    // Validar campos si están presentes en la actualización
+    // Validar campos si estÃ¡n presentes en la actualizaciÃ³n
     if (caseData.application_id) {
       const { data: appExists, error: appError } = await supabase
         .from('applications')
@@ -994,7 +887,7 @@ export const caseService = {
         .single();
 
       if (appError || !appExists) {
-        throw new Error('La aplicación especificada no existe o no está activa');
+        throw new Error('La aplicaciÃ³n especificada no existe o no estÃ¡ activa');
       }
     }
 
@@ -1007,7 +900,7 @@ export const caseService = {
         .single();
 
       if (originError || !originExists) {
-        throw new Error('El origen especificado no existe o no está activo');
+        throw new Error('El origen especificado no existe o no estÃ¡ activo');
       }
     }
 
@@ -1020,11 +913,11 @@ export const caseService = {
         .single();
 
       if (priorityError || !priorityExists) {
-        throw new Error('La prioridad especificada no existe o no está activa');
+        throw new Error('La prioridad especificada no existe o no estÃ¡ activa');
       }
     }
 
-    // Validar número de caso único si se está actualizando
+    // Validar nÃºmero de caso Ãºnico si se estÃ¡ actualizando
     if (caseData.case_number) {
       const { data: duplicateCase, error: duplicateError } = await supabase
         .from('cases')
@@ -1034,7 +927,7 @@ export const caseService = {
         .single();
 
       if (!duplicateError && duplicateCase) {
-        throw new Error('Ya existe otro caso con este número');
+        throw new Error('Ya existe otro caso con este nÃºmero');
       }
     }
 
@@ -1086,14 +979,7 @@ export const caseService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'cases',
-      'DELETE',
-      id,
-      `Caso eliminado: ${caseToDelete.case_number} - ${caseToDelete.description?.substring(0, 100)}...`,
-      caseToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   },
 
   async updateStatus(id: string, status: Case['status']): Promise<Case> {
@@ -1127,7 +1013,7 @@ export const todoService = {
         case:cases(case_number)
       `);
 
-    // Si no es admin, filtrar solo los TODOs asignados al usuario o creados por él
+    // Si no es admin, filtrar solo los TODOs asignados al usuario o creados por Ã©l
     if (!isAdmin && currentUserId) {
       query = query.or(`assigned_to.eq.${currentUserId},created_by.eq.${currentUserId}`);
     }
@@ -1181,7 +1067,7 @@ export const todoService = {
       .single();
 
     if (userError || !userExists) {
-      throw new Error('El usuario especificado no existe o no está activo');
+      throw new Error('El usuario especificado no existe o no estÃ¡ activo');
     }
 
     // Validar usuario asignado si se especifica
@@ -1194,7 +1080,7 @@ export const todoService = {
         .single();
 
       if (assignedUserError || !assignedUserExists) {
-        throw new Error('El usuario asignado no existe o no está activo');
+        throw new Error('El usuario asignado no existe o no estÃ¡ activo');
       }
     }
 
@@ -1208,7 +1094,7 @@ export const todoService = {
         .single();
 
       if (priorityError || !priorityExists) {
-        throw new Error('La prioridad especificada no existe o no está activa');
+        throw new Error('La prioridad especificada no existe o no estÃ¡ activa');
       }
     }
 
@@ -1225,13 +1111,13 @@ export const todoService = {
       }
     }
 
-    // Preparar los datos, removiendo case_id si está vacío
+    // Preparar los datos, removiendo case_id si estÃ¡ vacÃ­o
     const dataToInsert = {
       ...todoData,
       created_by: createdBy
     };
     
-    // Si case_id está vacío, no lo incluimos en el insert
+    // Si case_id estÃ¡ vacÃ­o, no lo incluimos en el insert
     if (!todoData.case_id || todoData.case_id.trim() === '') {
       delete dataToInsert.case_id;
     }
@@ -1261,7 +1147,7 @@ export const todoService = {
       throw new Error('El TODO especificado no existe');
     }
 
-    // Validar usuario asignado si se está actualizando
+    // Validar usuario asignado si se estÃ¡ actualizando
     if (todoData.assigned_to) {
       const { data: assignedUserExists, error: assignedUserError } = await supabase
         .from('users')
@@ -1271,11 +1157,11 @@ export const todoService = {
         .single();
 
       if (assignedUserError || !assignedUserExists) {
-        throw new Error('El usuario asignado no existe o no está activo');
+        throw new Error('El usuario asignado no existe o no estÃ¡ activo');
       }
     }
 
-    // Validar prioridad si se está actualizando
+    // Validar prioridad si se estÃ¡ actualizando
     if (todoData.priority_id) {
       const { data: priorityExists, error: priorityError } = await supabase
         .from('priorities')
@@ -1285,11 +1171,11 @@ export const todoService = {
         .single();
 
       if (priorityError || !priorityExists) {
-        throw new Error('La prioridad especificada no existe o no está activa');
+        throw new Error('La prioridad especificada no existe o no estÃ¡ activa');
       }
     }
 
-    // Validar caso si se está actualizando
+    // Validar caso si se estÃ¡ actualizando
     if (todoData.case_id && todoData.case_id.trim() !== '') {
       const { data: caseExists, error: caseError } = await supabase
         .from('cases')
@@ -1302,7 +1188,7 @@ export const todoService = {
       }
     }
 
-    // Preparar los datos, removiendo case_id si está vacío
+    // Preparar los datos, removiendo case_id si estÃ¡ vacÃ­o
     const dataToUpdate = { ...todoData };
     if ('case_id' in dataToUpdate && (!dataToUpdate.case_id || dataToUpdate.case_id.trim() === '')) {
       delete dataToUpdate.case_id;
@@ -1323,7 +1209,7 @@ export const todoService = {
   },
 
   async delete(id: string): Promise<void> {
-    // Obtener los datos del TODO antes de eliminarlo para auditoría
+    // Obtener los datos del TODO antes de eliminarlo para auditorÃ­a
     const { data: todoToDelete, error: getTodoError } = await supabase
       .from('todos')
       .select(`
@@ -1347,14 +1233,7 @@ export const todoService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    await logAuditAction(
-      'todos',
-      'DELETE',
-      id,
-      `TODO eliminado: ${todoToDelete.title} - ${todoToDelete.description?.substring(0, 100)}...`,
-      todoToDelete
-    );
+    // AuditorÃ­a manejada en el componente para evitar duplicados
   },
 
   async updateStatus(id: string, status: Todo['status']): Promise<Todo> {
@@ -1388,7 +1267,7 @@ export const timeService = {
         .single();
 
       if (userError || !userExists) {
-        throw new Error('El usuario especificado no existe o no está activo');
+        throw new Error('El usuario especificado no existe o no estÃ¡ activo');
       }
     }
 
@@ -1569,7 +1448,7 @@ export const timeService = {
       .single();
 
     if (userError || !userExists) {
-      throw new Error('El usuario especificado no existe o no está activo');
+      throw new Error('El usuario especificado no existe o no estÃ¡ activo');
     }
 
     // Validar que el TODO existe
@@ -1610,7 +1489,7 @@ export const timeService = {
   async deleteTimeEntry(id: string, type: 'case' | 'todo'): Promise<void> {
     const table = type === 'case' ? 'time_entries' : 'time_tracking';
 
-    // Obtener los datos antes de eliminar para auditoría
+    // Obtener los datos antes de eliminar para auditorÃ­a
     const { data: timeEntryToDelete, error: getTimeError } = await supabase
       .from(table)
       .select(`
@@ -1632,18 +1511,7 @@ export const timeService = {
     
     if (error) throw error;
 
-    // Registrar la eliminación en el log de auditoría
-    const relatedItem = type === 'case' 
-      ? timeEntryToDelete.cases?.case_number 
-      : timeEntryToDelete.todos?.title;
-    
-    await logAuditAction(
-      table,
-      'DELETE',
-      id,
-      `Registro de tiempo eliminado del ${type === 'case' ? 'caso' : 'TODO'}: ${relatedItem} - Usuario: ${timeEntryToDelete.users?.name}`,
-      timeEntryToDelete
-    );
+    // Auditoría manejada en el componente para evitar duplicados
   }
 };
 
@@ -1732,3 +1600,4 @@ export const reportService = {
     };
   }
 };
+

@@ -39,6 +39,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
 import DataVisibilityInfo from '../components/Common/DataVisibilityInfo';
+import { useAuditLogger } from '../services/auditService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -67,6 +68,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const Reports: React.FC = () => {
+  const { logAction } = useAuditLogger();
   const [tabValue, setTabValue] = useState(0);
   const [startDate, setStartDate] = useState<Dayjs>(dayjs().subtract(30, 'day'));
   const [endDate, setEndDate] = useState<Dayjs>(dayjs());
@@ -164,7 +166,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  const exportCasesReport = () => {
+  const exportCasesReport = async () => {
     const filteredCases = cases.filter(caso => {
       const caseDate = dayjs(caso.created_at);
       return caseDate.isAfter(startDate) && caseDate.isBefore(endDate);
@@ -186,9 +188,13 @@ const Reports: React.FC = () => {
     }));
 
     exportToExcel(reportData, 'reporte_casos', 'Casos');
+    
+    // Auditoría
+    await logAction('reports', 'INSERT', 'cases_export', user?.id, 
+      `Reporte de casos exportado - ${filteredCases.length} registros`);
   };
 
-  const exportTodosReport = () => {
+  const exportTodosReport = async () => {
     const filteredTodos = todos.filter(todo => {
       const todoDate = dayjs(todo.created_at);
       return todoDate.isAfter(startDate) && todoDate.isBefore(endDate);
@@ -208,9 +214,13 @@ const Reports: React.FC = () => {
     }));
 
     exportToExcel(reportData, 'reporte_todos', 'TODOs');
+    
+    // Auditoría
+    await logAction('reports', 'INSERT', 'todos_export', user?.id, 
+      `Reporte de TODOs exportado - ${filteredTodos.length} registros`);
   };
 
-  const exportTimeReport = () => {
+  const exportTimeReport = async () => {
     const reportData = timeEntries.map(entry => ({
       'Tipo': entry.case_id ? 'Caso' : 'TODO',
       'Referencia': entry.cases?.case_number || entry.todos?.title || '',
@@ -222,6 +232,10 @@ const Reports: React.FC = () => {
     }));
 
     exportToExcel(reportData, 'reporte_tiempo', 'Tiempo');
+    
+    // Auditoría
+    await logAction('reports', 'INSERT', 'time_export', user?.id, 
+      `Reporte de tiempo exportado - ${timeEntries.length} registros`);
   };
 
   // Datos para gráficos

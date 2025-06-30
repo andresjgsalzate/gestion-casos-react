@@ -32,8 +32,13 @@ import {
 } from '@mui/icons-material';
 import { Application } from '../../types';
 import { applicationService } from '../../services/api';
+import { useAuditLogger } from '../../services/auditService';
+import { useAuthStore } from '../../store/authStore';
 
 const ApplicationManagement: React.FC = () => {
+  const { logAction } = useAuditLogger();
+  const { user } = useAuthStore();
+  
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,11 +131,40 @@ const ApplicationManagement: React.FC = () => {
         is_active: formData.is_active
       };
 
+      let applicationId: string;
+      
       if (editingApplication) {
-        await applicationService.update(editingApplication.id, applicationData);
+        const oldData = { ...editingApplication };
+        const updatedApp = await applicationService.update(editingApplication.id, applicationData);
+        applicationId = updatedApp.id;
+        
+        // Registrar auditoría para actualización
+        await logAction(
+          'applications',
+          'UPDATE',
+          applicationId,
+          user?.id,
+          `Aplicación actualizada: ${applicationData.name}`,
+          oldData,
+          applicationData
+        );
+        
         setSuccess('Aplicación actualizada exitosamente');
       } else {
-        await applicationService.create(applicationData);
+        const newApp = await applicationService.create(applicationData);
+        applicationId = newApp.id;
+        
+        // Registrar auditoría para creación
+        await logAction(
+          'applications',
+          'INSERT',
+          applicationId,
+          user?.id,
+          `Aplicación creada: ${applicationData.name}`,
+          undefined,
+          applicationData
+        );
+        
         setSuccess('Aplicación creada exitosamente');
       }
 
@@ -151,7 +185,20 @@ const ApplicationManagement: React.FC = () => {
       onConfirm: async () => {
         try {
           setLoading(true);
+          
           await applicationService.delete(application.id);
+          
+          // Registrar auditoría para eliminación
+          await logAction(
+            'applications',
+            'DELETE',
+            application.id,
+            user?.id,
+            `Aplicación eliminada: ${application.name}`,
+            application,
+            undefined
+          );
+          
           setSuccess('Aplicación eliminada exitosamente');
           await loadApplications();
         } catch (err: any) {

@@ -57,8 +57,12 @@ import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
 import DataVisibilityInfo from '../components/Common/DataVisibilityInfo';
 import { Case, Application, Origin, Priority, CaseFormData, TimeEntry } from '../types';
+import { useAuditLogger } from '../services/auditService';
 
 const CaseManagement: React.FC = () => {
+  const { logAction } = useAuditLogger();
+  const { user } = useAuthStore();
+  
   const [cases, setCases] = useState<Case[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [origins, setOrigins] = useState<Origin[]>([]);
@@ -100,7 +104,6 @@ const CaseManagement: React.FC = () => {
     priority_id: '',
   });
 
-  const { user } = useAuthStore();
   const { permissions, isAdmin } = usePermissions();
 
   const loadData = useCallback(async () => {
@@ -176,10 +179,21 @@ const CaseManagement: React.FC = () => {
       if (!user) return;
 
       if (selectedCase) {
+        const oldData = { ...selectedCase };
         await caseService.update(selectedCase.id, formData, user.id, isAdmin);
+        
+        // Auditoría
+        await logAction('cases', 'UPDATE', selectedCase.id, user?.id, 
+          `Caso ${selectedCase.case_number} actualizado`, oldData, { ...oldData, ...formData });
+        
         toast.success('Caso actualizado exitosamente');
       } else {
-        await caseService.create(formData, user.id);
+        const newCase = await caseService.create(formData, user.id);
+        
+        // Auditoría
+        await logAction('cases', 'INSERT', newCase.id, user?.id, 
+          `Caso ${formData.case_number} creado`, undefined, formData);
+        
         toast.success('Caso creado exitosamente');
       }
 
@@ -215,7 +229,15 @@ const CaseManagement: React.FC = () => {
       '¿Está seguro de que desea eliminar este caso? Esta acción no se puede deshacer.',
       async () => {
         try {
+          const caseToDelete = cases.find(c => c.id === caseId);
           await caseService.delete(caseId, user?.id, isAdmin);
+          
+          // Auditoría
+          if (caseToDelete) {
+            await logAction('cases', 'DELETE', caseId, user?.id, 
+              `Caso ${caseToDelete.case_number} eliminado`, caseToDelete, undefined);
+          }
+          
           toast.success('Caso eliminado exitosamente');
           loadData();
         } catch (error) {
@@ -232,6 +254,14 @@ const CaseManagement: React.FC = () => {
       
       const timeEntry = await timeService.startTimer(caseId, undefined, user.id);
       setTimer({ running: true, seconds: 0, caseId, timeEntryId: timeEntry.id });
+      
+      // Auditoría
+      const caseItem = cases.find(c => c.id === caseId);
+      if (caseItem) {
+        await logAction('time_entries', 'INSERT', timeEntry.id, user?.id, 
+          `Timer iniciado para caso ${caseItem.case_number}`, undefined, timeEntry);
+      }
+      
       toast.success('Timer iniciado');
     } catch (error) {
       toast.error('Error al iniciar el timer');
@@ -255,6 +285,14 @@ const CaseManagement: React.FC = () => {
         if (error) throw error;
 
         await caseService.updateStatus(timer.caseId, 'EN CURSO');
+        
+        // Auditoría
+        const caseItem = cases.find(c => c.id === timer.caseId);
+        if (caseItem) {
+          await logAction('time_entries', 'UPDATE', timer.timeEntryId, user?.id, 
+            `Timer detenido para caso ${caseItem.case_number} - Duración: ${Math.round(timer.seconds / 60)} minutos`);
+        }
+        
         setTimer({ running: false, seconds: 0, caseId: null, timeEntryId: null });
         toast.success('Timer detenido y caso actualizado');
         loadData();

@@ -58,8 +58,10 @@ import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
 import { useReferentialIntegrity } from '../hooks/useReferentialIntegrity';
 import { Todo, Priority, User, Case, TodoFormData } from '../types';
+import { useAuditLogger } from '../services/auditService';
 
 const TodoManagement: React.FC = () => {
+  const { logAction } = useAuditLogger();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -190,10 +192,21 @@ const TodoManagement: React.FC = () => {
 
     const result = await safeExecute(async () => {
       if (selectedTodo) {
+        const oldData = { ...selectedTodo };
         await todoService.update(selectedTodo.id, formData);
+        
+        // Auditoría
+        await logAction('todos', 'UPDATE', selectedTodo.id, user?.id, 
+          `TODO "${selectedTodo.title}" actualizado`, oldData, { ...oldData, ...formData });
+        
         return 'actualizado';
       } else {
-        await todoService.create(formData, user.id);
+        const newTodo = await todoService.create(formData, user.id);
+        
+        // Auditoría
+        await logAction('todos', 'INSERT', newTodo.id, user?.id, 
+          `TODO "${formData.title}" creado`, undefined, formData);
+        
         return 'creado';
       }
     }, 'Guardar TODO');
@@ -211,7 +224,15 @@ const TodoManagement: React.FC = () => {
       '¿Está seguro de que desea eliminar este TODO? Esta acción no se puede deshacer',
       async () => {
         const result = await safeExecute(async () => {
+          const todoToDelete = todos.find(t => t.id === todoId);
           await todoService.delete(todoId);
+          
+          // Auditoría
+          if (todoToDelete) {
+            await logAction('todos', 'DELETE', todoId, user?.id, 
+              `TODO "${todoToDelete.title}" eliminado`, todoToDelete, undefined);
+          }
+          
           return true;
         }, 'Eliminar TODO');
 
@@ -225,7 +246,18 @@ const TodoManagement: React.FC = () => {
 
   const handleStatusChange = async (todoId: string, status: Todo['status']) => {
     try {
+      const todoToUpdate = todos.find(t => t.id === todoId);
+      const oldStatus = todoToUpdate?.status;
+      
       await todoService.updateStatus(todoId, status);
+      
+      // Auditoría
+      if (todoToUpdate) {
+        await logAction('todos', 'UPDATE', todoId, user?.id, 
+          `Estado del TODO "${todoToUpdate.title}" cambiado de ${oldStatus} a ${status}`, 
+          { ...todoToUpdate, status: oldStatus }, { ...todoToUpdate, status });
+      }
+      
       toast.success('Estado actualizado exitosamente');
       loadData();
     } catch (error) {
