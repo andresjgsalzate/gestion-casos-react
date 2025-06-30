@@ -5,6 +5,56 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-06-30
+
+### 🔧 Refactorización del Módulo de Archivo
+
+#### ⚠️ CAMBIO IMPORTANTE (BREAKING CHANGE)
+- **Configuración unificada**: Eliminada la configuración separada `ArchiveSettings`
+- **Gestión centralizada**: Toda la configuración del módulo ahora se maneja a través de las políticas de archivo
+- **Nuevos campos en políticas**: Las políticas incluyen ahora configuración general, permisos y notificaciones
+
+#### ✅ Corregido
+- **Duplicación de configuraciones**: Eliminada la separación confusa entre configuraciones generales y políticas
+- **Interfaz simplificada**: Un solo formulario para toda la configuración del módulo de archivo
+
+#### ⚡ Mejorado
+- **Formulario expandido**: Las políticas de archivo incluyen ahora todos los campos de configuración:
+  - Días de advertencia antes del vencimiento
+  - Permisos de usuario (archivo/restauración)
+  - Requerimientos de razones para operaciones
+  - Configuración de notificaciones
+  - Retención legal
+  - Límites de operaciones masivas
+- **Base de datos**: Agregados 9 nuevos campos a la tabla `archive_policies`
+- **Experiencia de usuario**: Interfaz más intuitiva y consolidada
+
+#### �️ Eliminado
+- **Tipo `ArchiveSettings`**: Removido completamente de la aplicación
+- **Funciones obsoletas**: `getArchiveSettings` y `updateArchiveSettings`
+- **Componente deprecado**: `ArchiveSettings` reemplazado por mensaje informativo
+
+#### 🛠️ Técnico
+- **Nuevos campos en `archive_policies`**:
+  - `warning_days_before_expiry` (INTEGER)
+  - `allow_user_archive` (BOOLEAN)
+  - `allow_user_restore` (BOOLEAN)
+  - `require_reason_for_archive` (BOOLEAN)
+  - `require_reason_for_restore` (BOOLEAN)
+  - `enable_notifications` (BOOLEAN)
+  - `enable_legal_hold` (BOOLEAN)
+  - `max_retention_days` (INTEGER)
+  - `bulk_operation_limit` (INTEGER)
+
+#### 💾 Base de Datos
+- **Script requerido**: Ejecutar `database/add_archive_settings_to_policies.sql` para agregar los nuevos campos
+
+---
+
+## [1.3.0] - 2025-06-30 (Anterior)
+
+---
+
 ## [1.0.0] - 2025-06-28
 
 ### 🎉 Lanzamiento Inicial

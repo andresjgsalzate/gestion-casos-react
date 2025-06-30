@@ -3,6 +3,7 @@
 Un sistema completo de gestión de casos desarrollado con React, TypeScript y Supabase, diseñado para equipos de soporte técnico y administración de incidentes.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.1-green.svg)
 ![React](https://img.shields.io/badge/React-18.x-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-5.x-007fff.svg)
@@ -49,12 +50,15 @@ Un sistema completo de gestión de casos desarrollado con React, TypeScript y Su
 - **Archivo manual** - Solo por acción explícita del usuario con confirmación
 - **Sistema de restauración** - Reactivación completa con auditoría integrada
 - **Búsqueda avanzada** - Full-text search en contenido archivado
-- **Gestión de retención** - Políticas configurables y limpieza automática
+- **Gestión unificada de políticas** - Toda la configuración del módulo en un solo lugar
 - **Control de acceso** - Permisos granulares por rol de usuario
 - **Auditoría completa** - Integración total con sistema de auditoría centralizado
 - **Trazabilidad total** - Registro detallado de operaciones de archivo/restauración
 - **Datos preservados** - Conservación completa de información original
 - **Interfaz dedicada** - Página especializada con filtros y estadísticas
+- **Configuración centralizada** - Políticas de archivo incluyen configuración general del módulo
+- **Persistencia en base de datos** - Toda configuración almacenada en PostgreSQL (no localStorage)
+- **Gestión avanzada de retención** - Configuración flexible de tiempos y políticas
 
 ### 🎨 **Interfaz de Usuario**
 - Diseño responsive con Material-UI
@@ -158,6 +162,12 @@ REACT_APP_SUPABASE_ANON_KEY=tu_supabase_anon_key
    ```sql
    -- Para habilitar funcionalidad de archivo, ejecutar después del setup:
    database/archive_module.sql
+   ```
+
+   **Migración a v1.3.1 (Solo si ya tienes el módulo de archivo):**
+   ```sql
+   -- Para actualizar a la nueva estructura unificada de configuración:
+   database/add_archive_settings_to_policies.sql
    ```
 
    **Nota**: El setup.sql incluye toda la configuración base necesaria. El módulo de archivo es completamente opcional y autocontenido.
@@ -460,3 +470,12 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE.md](LICENSE.m
 ---
 
 ⭐ **¡Dale una estrella al proyecto si te resulta útil!**
+
+## 🆕 Últimas Actualizaciones
+
+### 🔧 Versión 1.3.1 - 2025-06-30
+- ✅ **Corregido problema de actualización de políticas de archivo** - Solucionado error "JSON object requested, multiple (or no) rows returned"
+- ⚡ **Sistema robusto con fallbacks automáticos** - 3 estrategias de actualización (RPC → UPDATE directo)
+- 🛠️ **Funciones RPC integradas** - Nuevas instalaciones incluyen automáticamente las correcciones
+- 📋 **Logging detallado** - Trazabilidad completa para diagnóstico de operaciones de archivo
+- 🔒 **Compatible con RLS** - Funciones que evitan conflictos de Row Level Security

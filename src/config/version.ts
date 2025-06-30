@@ -1,14 +1,31 @@
 export const VERSION_INFO = {
-  version: '1.3.0',
-  buildDate: '2025-06-30T03:44:53.666Z',
-  releaseDate: '2025-06-29',
-  codename: 'Módulo de Archivo Completo',
+  version: '1.3.1',
+  buildDate: '2025-06-30T05:04:33.128Z',
+  releaseDate: '2025-06-30',
+  codename: 'Configuración Unificada del Archivo',
   environment: process.env.NODE_ENV || 'development',
   commit: process.env.REACT_APP_GIT_SHA || 'local',
   branch: process.env.REACT_APP_GIT_BRANCH || 'main'
 };
 
 export const CHANGELOG = [
+  {
+    version: '1.3.1',
+    date: '2025-06-30',
+    title: 'Configuración Unificada del Archivo',
+    changes: [
+      '⚠️ CAMBIO IMPORTANTE: Eliminada la configuración separada ArchiveSettings',
+      'Toda la configuración del módulo ahora se maneja a través de las políticas de archivo',
+      'Agregados 9 nuevos campos a la tabla archive_policies para configuración completa',
+      'Formulario de políticas expandido con configuración general, permisos y notificaciones',
+      'Eliminados duplicación de configuraciones y componente ArchiveSettings obsoleto',
+      'Interfaz simplificada: un solo formulario para toda la configuración del módulo',
+      'Persistencia mejorada: toda configuración almacenada en PostgreSQL',
+      'Script SQL incluido para migración: add_archive_settings_to_policies.sql',
+      'Documentación actualizada con nueva estructura de configuración'
+    ],
+    type: 'breaking-change'
+  },
   {
     version: '1.3.0',
     date: '2025-06-29',

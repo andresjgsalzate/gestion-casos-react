@@ -106,6 +106,16 @@ export interface ArchivePolicy {
   created_by: string;
   created_at: string;
   updated_at: string;
+  // Nuevos campos de configuración general
+  warning_days_before_expiry?: number;
+  allow_user_archive?: boolean;
+  allow_user_restore?: boolean;
+  require_reason_for_archive?: boolean;
+  require_reason_for_restore?: boolean;
+  enable_notifications?: boolean;
+  enable_legal_hold?: boolean;
+  max_retention_days?: number;
+  bulk_operation_limit?: number;
   // Campos de JOIN
   created_by_user?: User;
 }
@@ -245,19 +255,13 @@ export interface ArchiveBulkOperation {
   created_by: string;
 }
 
-// Interfaces para configuración de archivo
-export interface ArchiveSettings {
-  autoArchiveEnabled: boolean;
-  defaultRetentionDays: number;
-  warningDaysBeforeExpiry: number;
-  allowUserArchive: boolean;
-  allowUserRestore: boolean;
-  requireReasonForArchive: boolean;
-  requireReasonForRestore: boolean;
-  enableNotifications: boolean;
-  enableLegalHold: boolean;
-  maxRetentionDays: number;
-  bulkOperationLimit: number;
+// Interfaces para operaciones masivas
+export interface BulkArchiveRequest {
+  case_ids?: string[];
+  todo_ids?: string[];
+  reason: ArchiveReasonType;
+  reason_text?: string;
+  retention_days?: number;
 }
 
 export interface Application {
