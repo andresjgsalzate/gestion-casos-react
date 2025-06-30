@@ -181,21 +181,56 @@ const Dashboard: React.FC = () => {
       const weeklyCompleted = [0, 0, 0, 0, 0, 0, 0];
       
       const today = new Date();
+      const currentDay = today.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+      
+      // Calcular el inicio de la semana (lunes)
       const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - today.getDay()); // Lunes
+      const daysToSubtract = currentDay === 0 ? 6 : currentDay - 1; // Si es domingo, retroceder 6 días
+      startOfWeek.setDate(today.getDate() - daysToSubtract);
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      // Calcular el final de la semana (domingo)
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
       
       cases.forEach((caso: any) => {
         const caseDate = new Date(caso.created_at);
-        const daysDiff = Math.floor((caseDate.getTime() - startOfWeek.getTime()) / (1000 * 60 * 60 * 24));
         
-        if (daysDiff >= 0 && daysDiff < 7) {
-          weeklyCreated[daysDiff]++;
+        // Verificar si el caso está en el rango de esta semana
+        if (caseDate >= startOfWeek && caseDate <= endOfWeek) {
+          const dayOfWeek = caseDate.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+          const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convertir a índice (Lunes = 0, Domingo = 6)
+          
+          weeklyCreated[dayIndex]++;
           
           if (caso.status === 'TERMINADA' && caso.updated_at) {
             const completedDate = new Date(caso.updated_at);
-            const completedDaysDiff = Math.floor((completedDate.getTime() - startOfWeek.getTime()) / (1000 * 60 * 60 * 24));
-            if (completedDaysDiff >= 0 && completedDaysDiff < 7) {
-              weeklyCompleted[completedDaysDiff]++;
+            if (completedDate >= startOfWeek && completedDate <= endOfWeek) {
+              const completedDayOfWeek = completedDate.getDay();
+              const completedDayIndex = completedDayOfWeek === 0 ? 6 : completedDayOfWeek - 1;
+              weeklyCompleted[completedDayIndex]++;
+            }
+          }
+        }
+      });
+
+      // También incluir TODOs en la actividad semanal
+      todos.forEach((todo: any) => {
+        const todoDate = new Date(todo.created_at);
+        
+        if (todoDate >= startOfWeek && todoDate <= endOfWeek) {
+          const dayOfWeek = todoDate.getDay();
+          const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          
+          weeklyCreated[dayIndex]++;
+          
+          if (todo.status === 'COMPLETED' && todo.updated_at) {
+            const completedDate = new Date(todo.updated_at);
+            if (completedDate >= startOfWeek && completedDate <= endOfWeek) {
+              const completedDayOfWeek = completedDate.getDay();
+              const completedDayIndex = completedDayOfWeek === 0 ? 6 : completedDayOfWeek - 1;
+              weeklyCompleted[completedDayIndex]++;
             }
           }
         }
@@ -267,6 +302,9 @@ const Dashboard: React.FC = () => {
         borderColor: 'rgb(75, 192, 192)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         tension: 0.1,
+        fill: false,
+        pointRadius: 5,
+        pointHoverRadius: 7,
       },
       {
         label: 'Casos Completados',
@@ -274,8 +312,33 @@ const Dashboard: React.FC = () => {
         borderColor: 'rgb(255, 99, 132)',
         backgroundColor: 'rgba(255, 99, 132, 0.2)',
         tension: 0.1,
+        fill: false,
+        pointRadius: 5,
+        pointHoverRadius: 7,
       },
     ],
+  };
+
+  const lineChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Actividad de la Semana Actual',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+        },
+      },
+    },
   };
 
   // Configuración del gráfico de barras (casos por aplicación)
@@ -508,7 +571,9 @@ const Dashboard: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Actividad Semanal
             </Typography>
-            <Line data={lineChartData} options={chartOptions} />
+            <Box sx={{ height: '300px' }}>
+              <Line data={lineChartData} options={lineChartOptions} />
+            </Box>
           </Paper>
         </Grid>
 
