@@ -52,12 +52,15 @@ Un sistema completo de gestión de casos desarrollado con React, TypeScript y Su
 - Tooltips y ayudas contextuales
 
 ### 🔍 **Auditoría y Trazabilidad**
-- Registro automático de todas las operaciones
-- Logs detallados de CRUD (Crear, Leer, Actualizar, Eliminar)
-- Dashboard de auditoría con filtros avanzados
-- Exportación de logs a CSV
-- Seguimiento de usuarios y actividades del sistema
-- **Nota**: Requiere configuración de políticas RLS en Supabase
+- **Sistema centralizado de auditoría** - Trazabilidad completa desde componentes React
+- Registro automático de todas las operaciones CRUD (Crear, Actualizar, Eliminar)
+- Dashboard de auditoría con filtros avanzados y paginación
+- Exportación de logs a CSV con datos completos
+- Seguimiento detallado: usuarios, IP, user agent, timestamps
+- **Resolución de nombres** - IDs convertidos a nombres legibles automáticamente
+- Modal de detalles con información completa y traducción de valores
+- **Sin duplicidad** - Auditoría manejada únicamente en frontend (eliminada del backend)
+- Soporte completo para operaciones de reportes y exportaciones
 - Tema personalizable
 - Componentes reutilizables
 
@@ -78,6 +81,8 @@ Un sistema completo de gestión de casos desarrollado con React, TypeScript y Su
 - **React Toastify** - Notificaciones
 - **XLSX** - Exportación de Excel
 - **Day.js** - Manipulación de fechas
+- **Zustand** - Estado global (AuthStore)
+- **Material Icons** - Iconografía del sistema
 
 ### Backend
 - **Supabase** - Backend como servicio
@@ -137,18 +142,33 @@ La aplicación estará disponible en `http://localhost:3000`
 src/
 ├── components/           # Componentes reutilizables
 │   ├── Admin/           # Componentes de administración
+│   │   ├── AuditLogManagement.tsx    # Dashboard de auditoría
+│   │   ├── UserManagement.tsx        # Gestión de usuarios
+│   │   ├── RoleManagement.tsx        # Gestión de roles
+│   │   └── ...                       # Otros módulos admin
 │   ├── Auth/            # Componentes de autenticación
 │   ├── Common/          # Componentes comunes
 │   └── Layout/          # Layout principal
-├── contexts/            # Contextos de React
 ├── hooks/              # Hooks personalizados
+│   └── usePermissions.ts             # Hook de permisos
 ├── lib/                # Configuraciones de librerías
+│   └── supabase.ts                   # Cliente de Supabase
 ├── pages/              # Páginas principales
+│   ├── Administration.tsx            # Panel de administración
+│   ├── CaseManagement.tsx           # Gestión de casos
+│   ├── TodoManagement.tsx           # Gestión de TODOs
+│   ├── Reports.tsx                  # Reportes y analytics
+│   └── Dashboard.tsx                # Dashboard principal
 ├── services/           # Servicios de API
+│   ├── api.ts                       # Servicios principales
+│   └── auditService.ts              # Sistema de auditoría
 ├── store/              # Store de estado global
-├── styles/             # Archivos CSS
+│   └── authStore.ts                 # Estado de autenticación
 ├── types/              # Definiciones de TypeScript
+│   └── index.ts                     # Interfaces principales
 └── utils/              # Utilidades
+    ├── logger.ts                    # Sistema de logging
+    └── passwordUtils.ts             # Utilidades de contraseñas
 ```
 
 ## 🎯 Funcionalidades por Módulo
@@ -193,6 +213,10 @@ src/
 - Configuración de aplicaciones
 - Gestión de orígenes y prioridades
 - Configuración de permisos
+- **Dashboard de Auditoría** - Visualización completa de logs del sistema
+- Filtros avanzados por tabla, operación, usuario y fecha
+- Modal de detalles con resolución automática de nombres
+- Exportación de logs con datos completos
 
 ## 🔧 Scripts Disponibles
 
@@ -263,6 +287,12 @@ El sistema soporta modo claro y oscuro:
 - `todoService` - Gestión de TODOs
 - `timeService` - Seguimiento de tiempo
 - `reportService` - Generación de reportes
+- `auditService` - **Sistema centralizado de auditoría**
+  - `createAuditLog()` - Crear entradas de auditoría
+  - `getAuditLogs()` - Obtener logs con filtros y paginación
+  - `resolveNames()` - Convertir IDs a nombres legibles
+  - `exportAuditLogs()` - Exportar logs a CSV
+  - `useAuditLogger()` - Hook para usar en componentes
 
 ### Estructura de Datos
 Ver `src/types/index.ts` para todas las interfaces y tipos.
@@ -274,88 +304,117 @@ Ver `src/types/index.ts` para todas las interfaces y tipos.
 2. **Permisos insuficientes**: Verificar configuración RLS
 3. **Datos no visibles**: Verificar aislamiento por usuario
 
-### ⚠️ Problema Conocido: Módulo de Auditoría
+### ✅ Sistema de Auditoría - Estado Actual
 
-**Síntoma**: El módulo de auditoría en Administración muestra datos de ejemplo en lugar de los registros reales de la base de datos.
+**Estado**: ✅ **COMPLETAMENTE FUNCIONAL**
 
-**Causa**: Row Level Security (RLS) en Supabase está bloqueando el acceso a la tabla `audit_logs`.
+**Mejoras Implementadas**:
 
-**Diagnóstico**:
-- Los datos existen en la tabla (50+ registros verificados)
-- La aplicación recibe error 401 Unauthorized
-- No se pueden insertar ni leer registros desde la aplicación
+1. **Auditoría Centralizada**: 
+   - Sistema unificado manejado desde componentes React
+   - Eliminada duplicidad de logs (frontend + triggers)
+   - Consistencia en todas las operaciones CRUD
 
-**Solución**:
-1. Acceder al editor SQL de Supabase
-2. Ejecutar el script `database/fix_rls_audit_logs.sql`
-3. O ejecutar manualmente estas políticas RLS:
+2. **Resolución de Problemas RLS**:
+   - Políticas Row Level Security configuradas correctamente
+   - Acceso completo a tabla `audit_logs` desde la aplicación
+   - Sin errores de autorización
 
-```sql
--- Permitir lectura de logs de auditoría
-CREATE POLICY "audit_logs_select_policy" ON audit_logs
-    FOR SELECT 
-    USING (true);
+3. **Información Completa**:
+   - ✅ `user_id` - Auto-detección del usuario actual
+   - ✅ `ip_address` - Captura con múltiples servicios de fallback
+   - ✅ `user_agent` - Información completa del navegador
+   - ✅ `description` - Descripciones detalladas de cada operación
+   - ✅ `old_data/new_data` - Datos anteriores y nuevos para comparación
 
--- Permitir escritura de logs de auditoría  
-CREATE POLICY "audit_logs_insert_policy" ON audit_logs
-    FOR INSERT 
-    WITH CHECK (true);
+4. **Dashboard Avanzado**:
+   - Filtros por tabla, operación, usuario y rango de fechas
+   - Paginación eficiente para grandes volúmenes de datos
+   - Modal de detalles con nombres legibles (usuarios, prioridades, etc.)
+   - Exportación completa a CSV
+
+5. **Cobertura Completa**:
+   - ✅ Gestión de Usuarios
+   - ✅ Gestión de Roles  
+   - ✅ Gestión de Aplicaciones
+   - ✅ Gestión de Orígenes
+   - ✅ Gestión de Prioridades
+   - ✅ Gestión de Casos
+   - ✅ Gestión de TODOs
+   - ✅ Reportes y Exportaciones
+   - ✅ Operaciones de Tiempo (Timers)
+
+**Arquitectura Final**:
+```
+Componentes React → useAuditLogger() → auditService → Supabase audit_logs
 ```
 
-**Estado Actual**: 
-- ✅ Módulo funcional con datos reales de Supabase
-- ✅ Políticas RLS configuradas correctamente
-- ✅ Todos los campos se guardan apropiadamente
-- ✅ Modal de detalles con nombres legibles
+**Acceso al Dashboard**:
+- Ir a **Administración → Auditoría**
+- Filtrar por cualquier criterio
+- Ver detalles completos en modal
+- Exportar logs cuando sea necesario
 
-## 🔧 Logs de Auditoría - Mejoras Implementadas
+## 🔍 Sistema de Auditoría - Guía de Uso
 
-### ✅ Problema Resuelto: Campos NULL en audit_logs
+### 📋 Cómo Usar el Sistema de Auditoría
 
-**Problemas identificados y resueltos:**
-
-1. **user_id NULL:** No se obtenía el usuario actual cuando no se proporcionaba explícitamente
-2. **ip_address NULL:** Servicio de IP pública fallaba sin fallback
-3. **user_agent NULL:** No se manejaba correctamente cuando no estaba disponible
-4. **Nombres de IDs:** Solo se mostraban IDs en lugar de nombres legibles
-
-### 🛠️ Soluciones Implementadas
-
-#### 1. Auto-detección de Usuario
+#### 1. **En Componentes React**
 ```typescript
-// Obtiene automáticamente el usuario de la sesión
-const { data: { user } } = await supabase.auth.getUser();
-userId = user?.id || null;
+import { useAuditLogger } from '../services/auditService';
+
+const MiComponente = () => {
+  const { logAction } = useAuditLogger();
+  
+  const handleUpdate = async (id: string, data: any) => {
+    const oldData = await getExistingData(id);
+    await updateData(id, data);
+    
+    // Registrar auditoría
+    await logAction(
+      'mi_tabla',           // tabla
+      'UPDATE',             // operación  
+      id,                   // ID del registro
+      user?.id,             // ID del usuario (opcional)
+      'Descripción del cambio', // descripción
+      oldData,              // datos anteriores
+      data                  // datos nuevos
+    );
+  };
+};
 ```
 
-#### 2. Captura de IP con Fallback
-```typescript
-// Múltiples servicios para obtener IP
-try {
-  return await fetch('https://api.ipify.org?format=json');
-} catch {
-  return await fetch('https://httpbin.org/ip'); // Fallback
-}
+#### 2. **Visualizar Logs**
+- Navegar a **Administración → Auditoría**
+- Usar filtros para buscar logs específicos
+- Hacer clic en cualquier fila para ver detalles completos
+- Exportar logs filtrados a CSV
+
+#### 3. **Tipos de Operaciones Auditadas**
+- `INSERT` - Creación de nuevos registros
+- `UPDATE` - Modificación de registros existentes  
+- `DELETE` - Eliminación de registros
+- `SELECT` - Operaciones de lectura/exportación (reportes)
+
+### 🛠️ Implementación Técnica
+
+#### Arquitectura del Sistema
+```
+Frontend (React) → useAuditLogger → auditService → Supabase
+     ↓
+- Captura automática de user_id
+- Obtención de IP del cliente  
+- Registro de user_agent
+- Timestamp automático
 ```
 
-#### 3. Modal con Nombres Legibles
-- **Creado por:** Muestra nombre + email del usuario
-- **Asignado a:** Información completa del usuario asignado  
-- **Prioridad:** Nombre y nivel de prioridad
-- **Aplicación/Origen:** Nombres descriptivos
-
-#### 4. Logging Detallado
-Se agregó logging completo para debugging y monitoreo de la creación de logs.
-
-### 📋 Testing y Verificación
-
-```typescript
-// Método de testing incluido
-await auditService.testAuditLog();
-
-// Verificar en Supabase o ejecutar:
-// database/verify_audit_logs_setup.sql
-```
+#### Datos Capturados Automáticamente
+- **Usuario**: ID y nombre del usuario que realiza la acción
+- **Timestamp**: Fecha y hora exacta de la operación
+- **IP Address**: Dirección IP del cliente
+- **User Agent**: Información del navegador
+- **Descripción**: Descripción legible de la operación
+- **Datos**: Estados anterior y nuevo del registro
 
 ### Debug
 ```bash
@@ -365,6 +424,38 @@ npm start -- --verbose
 # Limpiar cache
 npm start -- --reset-cache
 ```
+
+## 📈 Changelog Reciente
+
+### v2.1.0 - Sistema de Auditoría Centralizado (Diciembre 2024)
+
+#### ✨ **Nuevas Características**
+- **Sistema de auditoría completamente renovado** y centralizado
+- Dashboard de auditoría con filtros avanzados y paginación
+- Modal de detalles con resolución automática de nombres (usuarios, prioridades, etc.)
+- Exportación completa de logs a CSV
+- Auto-detección de usuario actual en todas las operaciones
+
+#### 🔧 **Mejoras Técnicas**
+- Eliminada duplicidad de logs de auditoría (frontend + backend)
+- Implementado hook `useAuditLogger` para uso consistente
+- Captura automática de IP con servicios de fallback
+- Políticas RLS configuradas correctamente en Supabase
+- Cobertura completa de auditoría en todos los módulos CRUD
+
+#### 🐛 **Correcciones**
+- Corregidos campos NULL en tabla audit_logs
+- Eliminados errores de compilación TypeScript
+- Limpieza de archivos temporales y scripts de desarrollo
+- Corregidas signaturas de funciones de auditoría
+
+#### 🗂️ **Auditoría Implementada en:**
+- ✅ Gestión de Usuarios, Roles, Aplicaciones, Orígenes, Prioridades
+- ✅ Gestión de Casos y TODOs  
+- ✅ Reportes y exportaciones
+- ✅ Operaciones de tiempo (timers)
+
+---
 
 ## 🤝 Contribución
 
@@ -393,8 +484,8 @@ Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 
 Para soporte y preguntas:
 - 📧 Email: andresjgsalzate@gmail.com
-- 💬 GitHub Issues: [Reportar problema](https://github.com/tu-usuario/gestion-casos-react/issues)
-- 📖 Documentación: [Wiki del proyecto](https://github.com/tu-usuario/gestion-casos-react/wiki)
+- 💬 GitHub Issues: [Reportar problema](https://github.com/andresjgsalzate/gestion-casos-react/issues)
+- 📖 Documentación: [Wiki del proyecto](https://github.com/andresjgsalzate/gestion-casos-react/wiki)
 
 ---
 
