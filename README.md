@@ -51,6 +51,16 @@ Un sistema completo de gestión de casos desarrollado con React, TypeScript y Su
 - Navegación intuitiva por módulos
 - Tooltips y ayudas contextuales
 
+### 📋 **Sistema de Versiones**
+- **Control de versiones visible** - Información de versión accesible desde la interfaz
+- Chip de versión en el sidebar con modal de información detallada
+- Historial de cambios (changelog) integrado en la aplicación
+- Categorización de releases: major, feature, improvement, bugfix
+- Scripts automáticos para actualización de versiones
+- Sincronización entre `package.json` y código fuente
+- Información técnica: fecha de build, entorno, commit hash
+- Footer con detalles de versión en el dashboard
+
 ### 🔍 **Auditoría y Trazabilidad**
 - **Sistema centralizado de auditoría** - Trazabilidad completa desde componentes React
 - Registro automático de todas las operaciones CRUD (Crear, Actualizar, Eliminar)
@@ -288,201 +298,92 @@ El sistema soporta modo claro y oscuro:
 - `timeService` - Seguimiento de tiempo
 - `reportService` - Generación de reportes
 - `auditService` - **Sistema centralizado de auditoría**
-  - `createAuditLog()` - Crear entradas de auditoría
-  - `getAuditLogs()` - Obtener logs con filtros y paginación
-  - `resolveNames()` - Convertir IDs a nombres legibles
-  - `exportAuditLogs()` - Exportar logs a CSV
-  - `useAuditLogger()` - Hook para usar en componentes
 
-### Estructura de Datos
-Ver `src/types/index.ts` para todas las interfaces y tipos.
+## 🔄 Sistema de Versiones
 
-## 🐛 Resolución de Problemas
+### Control de Versiones Automático
+El sistema incluye control de versiones integrado y visible:
 
-### Errores Comunes
-1. **Error de conexión a Supabase**: Verificar variables de entorno
-2. **Permisos insuficientes**: Verificar configuración RLS
-3. **Datos no visibles**: Verificar aislamiento por usuario
-
-### ✅ Sistema de Auditoría - Estado Actual
-
-**Estado**: ✅ **COMPLETAMENTE FUNCIONAL**
-
-**Mejoras Implementadas**:
-
-1. **Auditoría Centralizada**: 
-   - Sistema unificado manejado desde componentes React
-   - Eliminada duplicidad de logs (frontend + triggers)
-   - Consistencia en todas las operaciones CRUD
-
-2. **Resolución de Problemas RLS**:
-   - Políticas Row Level Security configuradas correctamente
-   - Acceso completo a tabla `audit_logs` desde la aplicación
-   - Sin errores de autorización
-
-3. **Información Completa**:
-   - ✅ `user_id` - Auto-detección del usuario actual
-   - ✅ `ip_address` - Captura con múltiples servicios de fallback
-   - ✅ `user_agent` - Información completa del navegador
-   - ✅ `description` - Descripciones detalladas de cada operación
-   - ✅ `old_data/new_data` - Datos anteriores y nuevos para comparación
-
-4. **Dashboard Avanzado**:
-   - Filtros por tabla, operación, usuario y rango de fechas
-   - Paginación eficiente para grandes volúmenes de datos
-   - Modal de detalles con nombres legibles (usuarios, prioridades, etc.)
-   - Exportación completa a CSV
-
-5. **Cobertura Completa**:
-   - ✅ Gestión de Usuarios
-   - ✅ Gestión de Roles  
-   - ✅ Gestión de Aplicaciones
-   - ✅ Gestión de Orígenes
-   - ✅ Gestión de Prioridades
-   - ✅ Gestión de Casos
-   - ✅ Gestión de TODOs
-   - ✅ Reportes y Exportaciones
-   - ✅ Operaciones de Tiempo (Timers)
-
-**Arquitectura Final**:
-```
-Componentes React → useAuditLogger() → auditService → Supabase audit_logs
-```
-
-**Acceso al Dashboard**:
-- Ir a **Administración → Auditoría**
-- Filtrar por cualquier criterio
-- Ver detalles completos en modal
-- Exportar logs cuando sea necesario
-
-## 🔍 Sistema de Auditoría - Guía de Uso
-
-### 📋 Cómo Usar el Sistema de Auditoría
-
-#### 1. **En Componentes React**
-```typescript
-import { useAuditLogger } from '../services/auditService';
-
-const MiComponente = () => {
-  const { logAction } = useAuditLogger();
-  
-  const handleUpdate = async (id: string, data: any) => {
-    const oldData = await getExistingData(id);
-    await updateData(id, data);
-    
-    // Registrar auditoría
-    await logAction(
-      'mi_tabla',           // tabla
-      'UPDATE',             // operación  
-      id,                   // ID del registro
-      user?.id,             // ID del usuario (opcional)
-      'Descripción del cambio', // descripción
-      oldData,              // datos anteriores
-      data                  // datos nuevos
-    );
-  };
-};
-```
-
-#### 2. **Visualizar Logs**
-- Navegar a **Administración → Auditoría**
-- Usar filtros para buscar logs específicos
-- Hacer clic en cualquier fila para ver detalles completos
-- Exportar logs filtrados a CSV
-
-#### 3. **Tipos de Operaciones Auditadas**
-- `INSERT` - Creación de nuevos registros
-- `UPDATE` - Modificación de registros existentes  
-- `DELETE` - Eliminación de registros
-- `SELECT` - Operaciones de lectura/exportación (reportes)
-
-### 🛠️ Implementación Técnica
-
-#### Arquitectura del Sistema
-```
-Frontend (React) → useAuditLogger → auditService → Supabase
-     ↓
-- Captura automática de user_id
-- Obtención de IP del cliente  
-- Registro de user_agent
-- Timestamp automático
-```
-
-#### Datos Capturados Automáticamente
-- **Usuario**: ID y nombre del usuario que realiza la acción
-- **Timestamp**: Fecha y hora exacta de la operación
-- **IP Address**: Dirección IP del cliente
-- **User Agent**: Información del navegador
-- **Descripción**: Descripción legible de la operación
-- **Datos**: Estados anterior y nuevo del registro
-
-### Debug
+#### Comandos Disponibles
 ```bash
-# Ver logs detallados
-npm start -- --verbose
+# Actualizar información de versión
+npm run version:update
 
-# Limpiar cache
-npm start -- --reset-cache
+# Incrementar versión patch (1.2.0 → 1.2.1)
+npm run version:patch
+
+# Incrementar versión minor (1.2.0 → 1.3.0)
+npm run version:minor
+
+# Incrementar versión major (1.2.0 → 2.0.0)
+npm run version:major
+
+# Build con actualización automática
+npm run build
 ```
 
-## 📈 Changelog Reciente
+#### Visualización en la Interfaz
+- **Sidebar**: Chip clickeable con número de versión
+- **Dashboard**: Footer con información técnica
+- **Modal**: Historial completo de cambios
 
-### v2.1.0 - Sistema de Auditoría Centralizado (Diciembre 2024)
+#### Información Mostrada
+- Versión actual y nombre código
+- Fecha de release y build
+- Entorno (production/development)
+- Changelog categorizado por tipo de cambio
+- Información técnica para debugging
 
-#### ✨ **Nuevas Características**
-- **Sistema de auditoría completamente renovado** y centralizado
-- Dashboard de auditoría con filtros avanzados y paginación
-- Modal de detalles con resolución automática de nombres (usuarios, prioridades, etc.)
-- Exportación completa de logs a CSV
-- Auto-detección de usuario actual en todas las operaciones
-
-#### 🔧 **Mejoras Técnicas**
-- Eliminada duplicidad de logs de auditoría (frontend + backend)
-- Implementado hook `useAuditLogger` para uso consistente
-- Captura automática de IP con servicios de fallback
-- Políticas RLS configuradas correctamente en Supabase
-- Cobertura completa de auditoría en todos los módulos CRUD
-
-#### 🐛 **Correcciones**
-- Corregidos campos NULL en tabla audit_logs
-- Eliminados errores de compilación TypeScript
-- Limpieza de archivos temporales y scripts de desarrollo
-- Corregidas signaturas de funciones de auditoría
-
-#### 🗂️ **Auditoría Implementada en:**
-- ✅ Gestión de Usuarios, Roles, Aplicaciones, Orígenes, Prioridades
-- ✅ Gestión de Casos y TODOs  
-- ✅ Reportes y exportaciones
-- ✅ Operaciones de tiempo (timers)
+### Documentación Adicional
+- Ver `docs/VERSION_SYSTEM.md` para detalles técnicos
+- Sistema preparado para CI/CD
+- Sincronización automática entre `package.json` y código
 
 ---
 
-## 🤝 Contribución
+## 📝 Changelog
+
+### v1.2.0 - Dashboard Optimization (2024-12-29)
+- ✅ **Corregido el gráfico de actividad semanal** para mostrar datos reales
+- ✅ **Incluidos TODOs** en el cálculo de actividad semanal
+- ✅ **Eliminados datos de prueba** confusos del dashboard
+- ✅ **Sistema de versiones implementado** con visualización en interfaz
+- ✅ **Mejorado el sistema de auditoría** centralizado
+- ✅ **Limpieza de archivos** SQL y documentación temporal
+- ✅ **Actualizado README** con documentación completa
+- 🚀 **Desplegado en Netlify**: https://gestiondecasos.netlify.app
+
+### v1.1.0 - Audit System Centralization (2024-12-28)
+- ✅ **Centralizado el sistema de auditoría**
+- ✅ **Eliminada duplicidad de logs**
+- ✅ **Corregidos errores de compilación** en componentes
+- ✅ **Desplegado en Netlify** con éxito
+- ✅ **Mejorada la trazabilidad** del sistema
+
+### v1.0.0 - Initial Release (2024-12-15)
+- 🎉 **Sistema completo de gestión de casos**
+- ✅ **Módulo de TODOs integrado**
+- 📊 **Dashboard con métricas y gráficos**
+- 🔐 **Sistema de autenticación con Supabase**
+- 👥 **Gestión de usuarios y permisos**
+- ⏱️ **Seguimiento de tiempo por casos y TODOs**
+- 📈 **Reportes y exportación de datos**
+
+## 🤝 Contribuir
 
 1. Fork el proyecto
-2. Crear feature branch (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit changes (`git commit -am 'Agregar nueva funcionalidad'`)
-4. Push to branch (`git push origin feature/nueva-funcionalidad`)
-5. Crear Pull Request
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE.md](LICENSE.md) para detalles.
 
-## 👥 Autores
+## 📞 Contacto
 
-- **Desarrollador Principal** - [Andres Jurgensen Alzate](https://github.com/andresjgsalzate)
-
-## 🙏 Agradecimientos
-
-- Material-UI por los componentes de interfaz
-- Supabase por el backend como servicio
-- Chart.js por las visualizaciones
-- La comunidad de React por el ecosistema
-
-## 📞 Soporte
-
-Para soporte y preguntas:
+**Andrés Salzate**
 - 📧 Email: andresjgsalzate@gmail.com
 - 💬 GitHub Issues: [Reportar problema](https://github.com/andresjgsalzate/gestion-casos-react/issues)
 - 📖 Documentación: [Wiki del proyecto](https://github.com/andresjgsalzate/gestion-casos-react/wiki)
