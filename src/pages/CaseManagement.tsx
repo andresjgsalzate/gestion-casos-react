@@ -609,7 +609,40 @@ const CaseManagement: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
-    { field: 'case_number', headerName: 'Número de Caso', width: 150 },
+    { 
+      field: 'case_number', 
+      headerName: 'Número de Caso', 
+      width: 180,
+      renderCell: (params: any) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2">
+            {params.value}
+          </Typography>
+          {timer.running && timer.caseId === params.row.id && (
+            <Chip
+              icon={<TimerIcon sx={{ fontSize: '14px !important' }} />}
+              label="ACTIVO"
+              color="success"
+              size="small"
+              variant="filled"
+              sx={{
+                height: 20,
+                '& .MuiChip-label': {
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold',
+                  px: 0.5
+                },
+                '& .MuiChip-icon': {
+                  fontSize: '12px !important',
+                  animation: 'pulse 1.5s infinite'
+                },
+                animation: 'glow 2s ease-in-out infinite alternate'
+              }}
+            />
+          )}
+        </Box>
+      )
+    },
     { field: 'description', headerName: 'Descripción', width: 250, flex: 1 },
     {
       field: 'status',

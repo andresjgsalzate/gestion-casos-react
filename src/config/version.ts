@@ -1,14 +1,29 @@
 export const VERSION_INFO = {
-  version: '1.4.0',
-  buildDate: '2025-07-02T15:30:00.000Z',
+  version: '1.4.1',
+  buildDate: '2025-07-02T18:55:00.000Z',
   releaseDate: '2025-07-02',
-  codename: 'Menú Lateral Mejorado',
+  codename: 'Distintivos de Timer Activo',
   environment: process.env.NODE_ENV || 'development',
   commit: process.env.REACT_APP_GIT_SHA || 'local',
   branch: process.env.REACT_APP_GIT_BRANCH || 'main'
 };
 
 export const CHANGELOG = [
+  {
+    version: '1.4.1',
+    date: '2025-07-02',
+    title: 'Distintivos de Timer Activo',
+    changes: [
+      '🎯 Distintivo "ACTIVO" en Control de Casos para identificar casos con timer corriendo',
+      '🔄 Animaciones visuales: icono pulsante y resplandor verde en badges activos',
+      '👁️ Identificación instantánea del elemento con timer en ejecución',
+      '🚫 Prevención de confusión al trabajar con múltiples casos o TODOs',
+      '📏 Diseño compacto que no interfiere con la interfaz existente',
+      '🎨 Integración perfecta con el sistema de timer actual',
+      '✨ Badges responsivos compatibles con tema claro y oscuro'
+    ],
+    type: 'feature'
+  },
   {
     version: '1.4.0',
     date: '2025-07-02',
