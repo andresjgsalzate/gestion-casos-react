@@ -1,14 +1,34 @@
 export const VERSION_INFO = {
-  version: '1.3.1',
-  buildDate: '2025-06-30T05:04:33.128Z',
-  releaseDate: '2025-06-30',
-  codename: 'Configuración Unificada del Archivo',
+  version: '1.4.0',
+  buildDate: '2025-07-02T15:30:00.000Z',
+  releaseDate: '2025-07-02',
+  codename: 'Menú Lateral Mejorado',
   environment: process.env.NODE_ENV || 'development',
   commit: process.env.REACT_APP_GIT_SHA || 'local',
   branch: process.env.REACT_APP_GIT_BRANCH || 'main'
 };
 
 export const CHANGELOG = [
+  {
+    version: '1.4.0',
+    date: '2025-07-02',
+    title: 'Menú Lateral Mejorado',
+    changes: [
+      '🎨 Implementación completa de menú lateral colapsable con estado persistente',
+      '🔄 Icono de la aplicación funciona como botón para expandir cuando está colapsado',
+      '📐 Reducción significativa del espacio ocupado por los controles del menú',
+      '🎯 Flecha de colapso más pequeña y discreta sin borde circular',
+      '📏 Espaciado optimizado con padding reducido para diseño más compacto',
+      '💬 Tooltips inteligentes que aparecen solo en modo colapsado',
+      '✨ Transiciones suaves entre estados expandido/colapsado',
+      '🏷️ Cambio global de "Sistema de Gestión de Casos" a "Gestión de Casos"',
+      '🧹 Eliminación de 35+ carpetas vacías (atoms, molecules, organisms, etc.)',
+      '📝 Limpieza de archivos markdown de documentación temporal',
+      '⚡ Estructura de componentes optimizada y simplificada',
+      '🚀 Importaciones optimizadas y eliminación de dependencias innecesarias'
+    ],
+    type: 'feature'
+  },
   {
     version: '1.3.1',
     date: '2025-06-30',

@@ -1,4 +1,4 @@
-# 📋 Sistema de Gestión de Casos
+# 📋 Gestión de Casos
 
 Un sistema completo de gestión de casos desarrollado con React, TypeScript y Supabase, diseñado para equipos de soporte técnico y administración de incidentes.
 
@@ -152,25 +152,22 @@ REACT_APP_SUPABASE_ANON_KEY=tu_supabase_anon_key
 
 4. **Configurar la base de datos**
 
-   **Configuración Principal:**
+   **✅ Configuración Completa con un Solo Script:**
    ```sql
    -- En el editor SQL de Supabase, ejecutar:
    database/setup.sql
    ```
 
-   **Módulo de Archivo (Opcional):**
-   ```sql
-   -- Para habilitar funcionalidad de archivo, ejecutar después del setup:
-   database/archive_module.sql
-   ```
+   **Incluye TODO lo necesario:**
+   - ✅ Sistema de usuarios, roles y permisos
+   - ✅ Gestión de casos y TODOs  
+   - ✅ Seguimiento de tiempo
+   - ✅ Sistema de auditoría
+   - ✅ Módulo de archivo con permisos granulares
+   - ✅ Políticas de seguridad (RLS) completas
+   - ✅ Funciones RPC para el módulo de archivo
 
-   **Migración a v1.3.1 (Solo si ya tienes el módulo de archivo):**
-   ```sql
-   -- Para actualizar a la nueva estructura unificada de configuración:
-   database/add_archive_settings_to_policies.sql
-   ```
-
-   **Nota**: El setup.sql incluye toda la configuración base necesaria. El módulo de archivo es completamente opcional y autocontenido.
+   **Nota**: Ya no se requieren scripts adicionales. El setup.sql contiene TODA la funcionalidad integrada, incluyendo el módulo de archivo completo.
 
 5. **Iniciar el servidor de desarrollo**
 ```bash
@@ -432,8 +429,12 @@ npm run build
 ## 📚 Documentación
 
 ### Base de Datos
-- **`database/setup.sql`**: Configuración principal completa
-- **`database/archive_module.sql`**: Módulo de archivo (opcional)
+- **`database/setup.sql`**: Configuración completa integrada con TODO el sistema
+  - ✅ Sistema de usuarios, roles y permisos
+  - ✅ Gestión de casos y TODOs
+  - ✅ Seguimiento de tiempo y auditoría
+  - ✅ Módulo de archivo completo
+  - ✅ Políticas RLS y funciones RPC
 
 ### Configuración Principal
 - **`src/types/index.ts`**: Interfaces y tipos TypeScript

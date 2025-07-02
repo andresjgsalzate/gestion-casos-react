@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Box,
@@ -16,6 +16,7 @@ import {
   MenuItem,
   Avatar,
   Divider,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -30,6 +31,8 @@ import {
   Archive as ArchiveIcon,
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
+  ChevronLeft as ChevronLeftIcon,
+  BusinessCenter as BusinessCenterIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -39,7 +42,8 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import ActiveTimerIndicator from '../Common/ActiveTimerIndicator';
 import VersionDisplay from '../Common/VersionDisplay';
 
-const drawerWidth = 240;
+const drawerWidth = 280; // Aumentado para mostrar el título completo
+const drawerWidthCollapsed = 64;
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,6 +52,10 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,8 +64,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { timer, activeTimers, stopTimer } = useTimerManager();
   const { isDarkMode, toggleTheme } = useThemeContext();
 
+  const currentDrawerWidth = isCollapsed ? drawerWidthCollapsed : drawerWidth;
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
+  }, [isCollapsed]);
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleCollapseToggle = () => {
+    setIsCollapsed(!isCollapsed);
   };
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -92,28 +110,89 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div">
-          Gestión de Casos
-        </Typography>
+      <Toolbar
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isCollapsed ? 'center' : 'space-between',
+          px: 1,
+          minHeight: '48px !important',
+        }}
+      >
+        {!isCollapsed && (
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            Gestión de Casos
+          </Typography>
+        )}
+        {isCollapsed && (
+          <Tooltip title="Expandir menú - Gestión de Casos" placement="right">
+            <IconButton
+              onClick={handleCollapseToggle}
+              sx={{
+                minWidth: 48,
+                minHeight: 48,
+                padding: 1,
+                color: 'primary.main',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+            >
+              <BusinessCenterIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+        {!isCollapsed && (
+          <IconButton
+            onClick={handleCollapseToggle}
+            size="small"
+            sx={{
+              padding: 0.5,
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            <ChevronLeftIcon fontSize="small" />
+          </IconButton>
+        )}
       </Toolbar>
       <Divider />
-      <List sx={{ flex: 1 }}>
+      <List sx={{ flex: 1, overflow: 'visible' }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname.startsWith(item.path)}
-              onClick={() => navigate(item.path)}
+            <Tooltip
+              title={isCollapsed ? item.text : ''}
+              placement="right"
+              disableHoverListener={!isCollapsed}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
+              <ListItemButton
+                selected={location.pathname.startsWith(item.path)}
+                onClick={() => navigate(item.path)}
+                sx={{
+                  minHeight: 48,
+                  justifyContent: isCollapsed ? 'center' : 'initial',
+                  px: 2.5,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: isCollapsed ? 0 : 3,
+                    justifyContent: 'center',
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                {!isCollapsed && <ListItemText primary={item.text} />}
+              </ListItemButton>
+            </Tooltip>
           </ListItem>
         ))}
       </List>
       <Divider />
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
-        <VersionDisplay showAsChip={true} />
+        {!isCollapsed && <VersionDisplay showAsChip={true} />}
       </Box>
     </Box>
   );
@@ -124,8 +203,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
+          ml: { sm: `${currentDrawerWidth}px` },
+          transition: 'width 0.3s ease, margin-left 0.3s ease',
         }}
       >
         <Toolbar>
@@ -211,7 +291,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ width: { sm: currentDrawerWidth }, flexShrink: { sm: 0 } }}
         aria-label="mailbox folders"
       >
         <Drawer
@@ -225,7 +305,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: drawerWidth,
+              width: drawerWidth, // En móvil siempre expandido
             },
           }}
         >
@@ -237,7 +317,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             display: { xs: 'none', sm: 'block' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: drawerWidth,
+              width: currentDrawerWidth,
+              transition: 'width 0.3s ease',
+              overflow: 'visible',
             },
           }}
           open
@@ -251,7 +333,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
+          transition: 'width 0.3s ease',
         }}
       >
         <Toolbar />

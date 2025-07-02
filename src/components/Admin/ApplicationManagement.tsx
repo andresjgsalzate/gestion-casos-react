@@ -337,7 +337,7 @@ const ApplicationManagement: React.FC = () => {
                 onChange={handleInputChange}
                 required
                 fullWidth
-                placeholder="ej: Sistema de Gestión de Casos"
+                placeholder="ej: Gestión de Casos"
               />
 
               <TextField

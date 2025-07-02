@@ -35,6 +35,23 @@ export class ArchiveService {
     }
     return null;
   }
+
+  /**
+   * Verificar si el usuario actual es administrador
+   */
+  private static isAdmin(user: any): boolean {
+    return user?.roles?.name === 'Administrador';
+  }
+
+  /**
+   * Verificar si el usuario tiene permiso específico
+   */
+  private static hasPermission(user: any, permission: string): boolean {
+    if (this.isAdmin(user)) return true;
+    
+    const permissions = user?.roles?.role_permissions?.map((rp: any) => rp.permissions?.name) || [];
+    return permissions.includes(permission);
+  }
   
   // ===============================
   // OPERACIONES DE CASOS
@@ -55,7 +72,12 @@ export class ArchiveService {
         return { success: false, error: 'Usuario no autenticado' };
       }
 
-      // Obtener datos del caso antes de archivar para auditoría
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.create')) {
+        return { success: false, error: 'No tiene permisos para archivar elementos' };
+      }
+
+      // Obtener datos del caso antes de archivar para auditoría y verificar propiedad
       const { data: caseData, error: getCaseError } = await supabase
         .from('cases')
         .select('*')
@@ -65,6 +87,11 @@ export class ArchiveService {
       if (getCaseError) {
         console.error('Error obteniendo datos del caso:', getCaseError);
         return { success: false, error: 'Error obteniendo datos del caso' };
+      }
+
+      // Verificar si el usuario puede archivar este caso
+      if (!this.isAdmin(user) && caseData.user_id !== user.id) {
+        return { success: false, error: 'Solo puede archivar sus propios casos' };
       }
 
       const { data, error } = await supabase.rpc('archive_case', {
@@ -122,7 +149,12 @@ export class ArchiveService {
         return { success: false, error: 'Usuario no autenticado' };
       }
 
-      // Obtener datos del caso archivado antes de restaurar para auditoría
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.restore')) {
+        return { success: false, error: 'No tiene permisos para restaurar elementos del archivo' };
+      }
+
+      // Obtener datos del caso archivado antes de restaurar para auditoría y verificar propiedad
       const { data: archivedData, error: getArchivedError } = await supabase
         .from('archived_cases')
         .select('*')
@@ -132,6 +164,19 @@ export class ArchiveService {
       if (getArchivedError) {
         console.error('Error obteniendo datos del caso archivado:', getArchivedError);
         return { success: false, error: 'Error obteniendo datos del caso archivado' };
+      }
+
+      // Verificar si el usuario puede restaurar este caso
+      if (!this.isAdmin(user)) {
+        // El usuario puede restaurar si:
+        // 1. Él lo archivó
+        // 2. El caso original era suyo
+        const canRestore = archivedData.archived_by === user.id || 
+                          archivedData.case_data?.user_id === user.id;
+        
+        if (!canRestore) {
+          return { success: false, error: 'Solo puede restaurar sus propios casos o casos que usted archivó' };
+        }
       }
 
       const { data, error } = await supabase.rpc('restore_case', {
@@ -186,6 +231,16 @@ export class ArchiveService {
     filters: ArchiveFilters = {}
   ): Promise<{ success: boolean; data?: ArchivedCase[]; error?: string; count?: number }> {
     try {
+      const user = this.getCurrentUser();
+      if (!user) {
+        return { success: false, error: 'Usuario no autenticado' };
+      }
+
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.view')) {
+        return { success: false, error: 'No tiene permisos para ver elementos archivados' };
+      }
+
       let query = supabase
         .from('archived_cases')
         .select(`
@@ -193,7 +248,15 @@ export class ArchiveService {
           archived_by_user:users!archived_cases_archived_by_fkey(id, name, email)
         `);
 
-      // Aplicar filtros
+      // Si no es admin, solo puede ver sus propios elementos archivados
+      // o elementos que fueron archivados por usuarios de casos que le pertenecían
+      if (!this.isAdmin(user)) {
+        // Filtrar por elementos archivados por el usuario actual
+        // o casos que originalmente le pertenecían
+        query = query.or(`archived_by.eq.${user.id},case_data->>user_id.eq.${user.id}`);
+      }
+
+      // Aplicar filtros adicionales
       if (filters.startDate) {
         query = query.gte('archived_at', filters.startDate);
       }
@@ -257,7 +320,12 @@ export class ArchiveService {
         return { success: false, error: 'Usuario no autenticado' };
       }
 
-      // Obtener datos del TODO antes de archivar para auditoría
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.create')) {
+        return { success: false, error: 'No tiene permisos para archivar elementos' };
+      }
+
+      // Obtener datos del TODO antes de archivar para auditoría y verificar propiedad
       const { data: todoData, error: getTodoError } = await supabase
         .from('todos')
         .select('*')
@@ -267,6 +335,14 @@ export class ArchiveService {
       if (getTodoError) {
         console.error('Error obteniendo datos del TODO:', getTodoError);
         return { success: false, error: 'Error obteniendo datos del TODO' };
+      }
+
+      // Verificar si el usuario puede archivar este TODO
+      if (!this.isAdmin(user)) {
+        const canArchive = todoData.assigned_to === user.id || todoData.created_by === user.id;
+        if (!canArchive) {
+          return { success: false, error: 'Solo puede archivar TODOs asignados a usted o creados por usted' };
+        }
       }
 
       const { data, error } = await supabase.rpc('archive_todo', {
@@ -324,7 +400,12 @@ export class ArchiveService {
         return { success: false, error: 'Usuario no autenticado' };
       }
 
-      // Obtener datos del TODO archivado antes de restaurar para auditoría
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.restore')) {
+        return { success: false, error: 'No tiene permisos para restaurar elementos del archivo' };
+      }
+
+      // Obtener datos del TODO archivado antes de restaurar para auditoría y verificar propiedad
       const { data: archivedData, error: getArchivedError } = await supabase
         .from('archived_todos')
         .select('*')
@@ -334,6 +415,20 @@ export class ArchiveService {
       if (getArchivedError) {
         console.error('Error obteniendo datos del TODO archivado:', getArchivedError);
         return { success: false, error: 'Error obteniendo datos del TODO archivado' };
+      }
+
+      // Verificar si el usuario puede restaurar este TODO
+      if (!this.isAdmin(user)) {
+        // El usuario puede restaurar si:
+        // 1. Él lo archivó
+        // 2. El TODO original era suyo (assigned_to o created_by)
+        const canRestore = archivedData.archived_by === user.id || 
+                          archivedData.todo_data?.assigned_to === user.id ||
+                          archivedData.todo_data?.created_by === user.id;
+        
+        if (!canRestore) {
+          return { success: false, error: 'Solo puede restaurar TODOs que le pertenecían o que usted archivó' };
+        }
       }
 
       const { data, error } = await supabase.rpc('restore_todo', {
@@ -388,6 +483,16 @@ export class ArchiveService {
     filters: ArchiveFilters = {}
   ): Promise<{ success: boolean; data?: ArchivedTodo[]; error?: string; count?: number }> {
     try {
+      const user = this.getCurrentUser();
+      if (!user) {
+        return { success: false, error: 'Usuario no autenticado' };
+      }
+
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.view')) {
+        return { success: false, error: 'No tiene permisos para ver elementos archivados' };
+      }
+
       let query = supabase
         .from('archived_todos')
         .select(`
@@ -395,6 +500,14 @@ export class ArchiveService {
           archived_by_user:users!archived_todos_archived_by_fkey(id, name, email),
           archived_case:archived_cases(id, case_number)
         `);
+
+      // Si no es admin, solo puede ver sus propios elementos archivados
+      // o TODOs que originalmente le pertenecían
+      if (!this.isAdmin(user)) {
+        // Filtrar por elementos archivados por el usuario actual
+        // o TODOs que originalmente le pertenecían (assigned_to o created_by)
+        query = query.or(`archived_by.eq.${user.id},todo_data->>assigned_to.eq.${user.id},todo_data->>created_by.eq.${user.id}`);
+      }
 
       // Aplicar filtros similares a los casos
       if (filters.startDate) {
@@ -444,12 +557,23 @@ export class ArchiveService {
   // ===============================
   // ESTADÍSTICAS Y BÚSQUEDA
   // ===============================
+  // ===============================
 
   /**
    * Obtener estadísticas del archivo
    */
   static async getArchiveStats(): Promise<{ success: boolean; data?: ArchiveStats; error?: string }> {
     try {
+      const user = this.getCurrentUser();
+      if (!user) {
+        return { success: false, error: 'Usuario no autenticado' };
+      }
+
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.view')) {
+        return { success: false, error: 'No tiene permisos para ver estadísticas del archivo' };
+      }
+
       const { data, error } = await supabase.rpc('get_archive_stats');
 
       if (error) {
@@ -498,6 +622,16 @@ export class ArchiveService {
     limit: number = 20
   ): Promise<{ success: boolean; data?: ArchiveSearchResult[]; error?: string }> {
     try {
+      const user = this.getCurrentUser();
+      if (!user) {
+        return { success: false, error: 'Usuario no autenticado' };
+      }
+
+      // Verificar permisos
+      if (!this.hasPermission(user, 'archive.search')) {
+        return { success: false, error: 'No tiene permisos para buscar en el archivo' };
+      }
+
       const { data, error } = await supabase.rpc('search_archive', {
         p_search_query: query,
         p_item_type: itemType,

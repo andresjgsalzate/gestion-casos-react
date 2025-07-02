@@ -118,7 +118,7 @@ const VersionDisplay: React.FC<VersionDisplayProps> = ({
             <InfoIcon color="primary" />
             <Box>
               <Typography variant="h6">
-                Sistema de Gestión de Casos
+                Gestión de Casos
               </Typography>
               <Typography variant="subtitle2" color="text.secondary">
                 {versionInfo.displayVersion}

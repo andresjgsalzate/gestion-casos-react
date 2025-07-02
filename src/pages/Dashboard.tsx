@@ -676,7 +676,7 @@ const Dashboard: React.FC = () => {
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          © 2024 Sistema de Gestión de Casos
+          © 2024 Gestión de Casos
         </Typography>
         <VersionDisplay showAsChip={false} showBuildInfo={true} />
       </Box>

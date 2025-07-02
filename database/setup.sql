@@ -1,5 +1,5 @@
 -- ===============================
--- SISTEMA DE GESTIÓN DE CASOS - CONFIGURACIÓN DE BASE DE DATOS
+-- GESTIÓN DE CASOS - CONFIGURACIÓN DE BASE DE DATOS
 -- ===============================
 -- 
 -- Este script configura la estructura principal de la base de datos.
@@ -10,15 +10,12 @@
 -- ✅ Gestión de casos y TODOs
 -- ✅ Seguimiento de tiempo
 -- ✅ Sistema de auditoría
--- ✅ Políticas de seguridad (RLS)
---
--- MÓDULO DE ARCHIVO:
--- Para instalar el módulo de archivo, ejecutar después de este script:
--- ✅ database/archive_module.sql (completamente autocontenido)
+-- ✅ Módulo de archivo con permisos granulares
+-- ✅ Políticas de seguridad (RLS) completas
 --
 -- EJECUCIÓN:
--- 1. Ejecutar este script completo en Supabase SQL Editor
--- 2. Opcionalmente ejecutar archive_module.sql para funcionalidad de archivo
+-- Ejecutar este script completo en Supabase SQL Editor
+-- Incluye TODA la funcionalidad necesaria para el sistema
 --
 -- Script de configuración completa para la base de datos de Gestión de Casos
 -- Ejecutar en Supabase SQL Editor
@@ -901,6 +898,415 @@ COMMENT ON FUNCTION update_archive_policy_admin_unsafe IS 'Función RPC para act
 COMMENT ON FUNCTION update_archive_policy_admin IS 'Función RPC segura para actualizar políticas de archivo con verificación de roles';
 
 -- ===============================
+-- MÓDULO DE ARCHIVO INTEGRADO
+-- ===============================
+
+-- Tipos enumerados para el módulo de archivo
+DO $$ BEGIN
+    CREATE TYPE archive_reason_type AS ENUM (
+        'MANUAL',           -- Archivo manual por usuario
+        'AUTOMATIC',        -- Archivo automático por política
+        'POLICY',           -- Archivo por aplicación de política
+        'BULK_OPERATION',   -- Operación en lote
+        'RETENTION',        -- Por política de retención
+        'LEGAL_HOLD',       -- Retención legal
+        'USER_REQUEST',     -- Solicitud específica del usuario
+        'ADMIN_ACTION',     -- Acción administrativa
+        'SYSTEM_CLEANUP',   -- Limpieza del sistema
+        'OTHER'             -- Otra razón (especificar en texto)
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE retention_status_type AS ENUM (
+        'ACTIVE',       -- Retención activa
+        'WARNING',      -- Próximo a expirar
+        'EXPIRED',      -- Expirado, listo para eliminación
+        'LEGAL_HOLD',   -- En retención legal
+        'PERMANENT'     -- Retención permanente
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE archive_operation_type AS ENUM (
+        'ARCHIVE',      -- Operación de archivo
+        'RESTORE',      -- Operación de restauración
+        'DELETE',       -- Eliminación permanente
+        'POLICY_APPLY', -- Aplicación de política
+        'BULK_ARCHIVE', -- Archivo en lote
+        'BULK_RESTORE', -- Restauración en lote
+        'UPDATE',       -- Actualización de elemento archivado
+        'SEARCH',       -- Búsqueda en archivo
+        'EXPORT'        -- Exportación de datos archivados
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE archive_notification_type AS ENUM (
+        'RETENTION_WARNING',    -- Advertencia de retención próxima
+        'RETENTION_EXPIRED',    -- Retención expirada
+        'ARCHIVE_CREATED',      -- Elemento archivado
+        'ARCHIVE_RESTORED',     -- Elemento restaurado
+        'POLICY_APPLIED',       -- Política aplicada
+        'LEGAL_HOLD_SET',       -- Retención legal establecida
+        'LEGAL_HOLD_REMOVED',   -- Retención legal removida
+        'BULK_OPERATION_COMPLETE' -- Operación en lote completada
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Permisos específicos del módulo de archivo
+INSERT INTO permissions (name, description) VALUES
+('archive.view', 'Ver elementos archivados'),
+('archive.create', 'Archivar elementos'),
+('archive.restore', 'Restaurar elementos del archivo'),
+('archive.delete', 'Eliminar permanentemente elementos archivados'),
+('archive.manage_policies', 'Gestionar políticas de archivo'),
+('archive.search', 'Buscar en elementos archivados'),
+('archive.export', 'Exportar elementos archivados')
+ON CONFLICT (name) DO NOTHING;
+
+-- Asignar permisos de archivo según roles
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Administrador'
+AND p.name IN ('archive.view', 'archive.create', 'archive.restore', 'archive.delete', 'archive.manage_policies', 'archive.search', 'archive.export')
+AND NOT EXISTS (
+    SELECT 1 FROM role_permissions rp 
+    WHERE rp.role_id = r.id AND rp.permission_id = p.id
+);
+
+-- Permisos para Supervisor
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Supervisor'
+AND p.name IN ('archive.view', 'archive.create', 'archive.restore', 'archive.search', 'archive.export')
+AND NOT EXISTS (
+    SELECT 1 FROM role_permissions rp 
+    WHERE rp.role_id = r.id AND rp.permission_id = p.id
+);
+
+-- Permisos para Analista
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Analista'
+AND p.name IN ('archive.view', 'archive.create', 'archive.search')
+AND NOT EXISTS (
+    SELECT 1 FROM role_permissions rp 
+    WHERE rp.role_id = r.id AND rp.permission_id = p.id
+);
+
+-- Permisos básicos para Usuario
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Usuario'
+AND p.name IN ('archive.view', 'archive.search')
+AND NOT EXISTS (
+    SELECT 1 FROM role_permissions rp 
+    WHERE rp.role_id = r.id AND rp.permission_id = p.id
+);
+
+-- Tabla de casos archivados
+CREATE TABLE IF NOT EXISTS archived_cases (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    original_case_id UUID NOT NULL,
+    case_number VARCHAR(100) NOT NULL,
+    case_data JSONB NOT NULL,
+    archived_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    archived_by UUID NOT NULL REFERENCES users(id),
+    archive_reason archive_reason_type DEFAULT 'MANUAL',
+    archive_reason_text TEXT,
+    retention_until TIMESTAMP WITH TIME ZONE NOT NULL,
+    retention_status retention_status_type DEFAULT 'ACTIVE',
+    tags TEXT[] DEFAULT '{}',
+    reactivation_count INTEGER DEFAULT 0,
+    last_reactivated_at TIMESTAMP WITH TIME ZONE,
+    last_reactivated_by UUID REFERENCES users(id),
+    is_legal_hold BOOLEAN DEFAULT FALSE,
+    search_vector tsvector,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de TODOs archivados
+CREATE TABLE IF NOT EXISTS archived_todos (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    original_todo_id UUID NOT NULL,
+    todo_data JSONB NOT NULL,
+    case_id UUID,
+    archived_case_id UUID REFERENCES archived_cases(id),
+    archived_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    archived_by UUID NOT NULL REFERENCES users(id),
+    archive_reason archive_reason_type DEFAULT 'MANUAL',
+    archive_reason_text TEXT,
+    retention_until TIMESTAMP WITH TIME ZONE NOT NULL,
+    retention_status retention_status_type DEFAULT 'ACTIVE',
+    tags TEXT[] DEFAULT '{}',
+    is_legal_hold BOOLEAN DEFAULT FALSE,
+    search_vector tsvector,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de políticas de archivo
+CREATE TABLE IF NOT EXISTS archive_policies (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    auto_archive_enabled BOOLEAN DEFAULT FALSE,
+    days_after_completion INTEGER,
+    inactivity_days INTEGER,
+    default_retention_days INTEGER NOT NULL DEFAULT 2555,
+    apply_to_cases BOOLEAN DEFAULT TRUE,
+    apply_to_todos BOOLEAN DEFAULT TRUE,
+    conditions JSONB DEFAULT '{}',
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de logs de operaciones de archivo
+CREATE TABLE IF NOT EXISTS archive_operation_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    operation_type archive_operation_type NOT NULL,
+    item_type VARCHAR(10) CHECK (item_type IN ('CASE', 'TODO')) NOT NULL,
+    item_id UUID NOT NULL,
+    original_item_id UUID,
+    performed_by UUID NOT NULL REFERENCES users(id),
+    reason TEXT,
+    operation_data JSONB DEFAULT '{}',
+    ip_address INET,
+    user_agent TEXT,
+    performed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de notificaciones de archivo
+CREATE TABLE IF NOT EXISTS archive_notifications (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    notification_type archive_notification_type NOT NULL,
+    recipient_id UUID NOT NULL REFERENCES users(id),
+    item_type VARCHAR(10) CHECK (item_type IN ('CASE', 'TODO')) NOT NULL,
+    item_id UUID NOT NULL,
+    message TEXT NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    read_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índices para rendimiento
+CREATE INDEX IF NOT EXISTS idx_archived_cases_original_id ON archived_cases(original_case_id);
+CREATE INDEX IF NOT EXISTS idx_archived_cases_archived_by ON archived_cases(archived_by);
+CREATE INDEX IF NOT EXISTS idx_archived_cases_archived_at ON archived_cases(archived_at);
+CREATE INDEX IF NOT EXISTS idx_archived_cases_retention_status ON archived_cases(retention_status);
+CREATE INDEX IF NOT EXISTS idx_archived_cases_search_vector ON archived_cases USING GIN(search_vector);
+
+CREATE INDEX IF NOT EXISTS idx_archived_todos_original_id ON archived_todos(original_todo_id);
+CREATE INDEX IF NOT EXISTS idx_archived_todos_archived_by ON archived_todos(archived_by);
+CREATE INDEX IF NOT EXISTS idx_archived_todos_archived_at ON archived_todos(archived_at);
+CREATE INDEX IF NOT EXISTS idx_archived_todos_search_vector ON archived_todos USING GIN(search_vector);
+
+CREATE INDEX IF NOT EXISTS idx_archive_operation_logs_performed_by ON archive_operation_logs(performed_by);
+CREATE INDEX IF NOT EXISTS idx_archive_operation_logs_performed_at ON archive_operation_logs(performed_at);
+CREATE INDEX IF NOT EXISTS idx_archive_notifications_recipient ON archive_notifications(recipient_id);
+
+-- Habilitar RLS en tablas de archivo
+ALTER TABLE archived_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE archived_todos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE archive_policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE archive_operation_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE archive_notifications ENABLE ROW LEVEL SECURITY;
+
+-- Funciones auxiliares para RLS
+CREATE OR REPLACE FUNCTION is_admin_user()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE u.id = auth.uid()
+        AND r.name = 'Administrador'
+        AND u.is_active = true
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION user_has_permission(permission_name text)
+RETURNS BOOLEAN AS $$
+BEGIN
+    IF is_admin_user() THEN
+        RETURN true;
+    END IF;
+    
+    RETURN EXISTS (
+        SELECT 1 
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        JOIN role_permissions rp ON r.id = rp.role_id
+        JOIN permissions p ON rp.permission_id = p.id
+        WHERE u.id = auth.uid()
+        AND p.name = permission_name
+        AND u.is_active = true
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Políticas RLS para archived_cases
+CREATE POLICY archived_cases_select ON archived_cases
+    FOR SELECT
+    USING (
+        user_has_permission('archive.view') AND (
+            is_admin_user() OR 
+            archived_by = auth.uid() OR 
+            (case_data->>'user_id')::uuid = auth.uid()
+        )
+    );
+
+CREATE POLICY archived_cases_insert ON archived_cases
+    FOR INSERT
+    WITH CHECK (
+        user_has_permission('archive.create') AND
+        archived_by = auth.uid()
+    );
+
+CREATE POLICY archived_cases_update ON archived_cases
+    FOR UPDATE
+    USING (
+        user_has_permission('archive.restore') AND (
+            is_admin_user() OR 
+            archived_by = auth.uid() OR 
+            (case_data->>'user_id')::uuid = auth.uid()
+        )
+    )
+    WITH CHECK (
+        user_has_permission('archive.restore') AND (
+            is_admin_user() OR 
+            archived_by = auth.uid() OR 
+            (case_data->>'user_id')::uuid = auth.uid()
+        )
+    );
+
+CREATE POLICY archived_cases_delete ON archived_cases
+    FOR DELETE
+    USING (
+        user_has_permission('archive.delete') AND 
+        is_admin_user()
+    );
+
+-- Políticas RLS para archived_todos
+CREATE POLICY archived_todos_select ON archived_todos
+    FOR SELECT
+    USING (
+        user_has_permission('archive.view') AND (
+            is_admin_user() OR 
+            archived_by = auth.uid() OR 
+            (todo_data->>'assigned_to')::uuid = auth.uid() OR
+            (todo_data->>'created_by')::uuid = auth.uid()
+        )
+    );
+
+CREATE POLICY archived_todos_insert ON archived_todos
+    FOR INSERT
+    WITH CHECK (
+        user_has_permission('archive.create') AND
+        archived_by = auth.uid()
+    );
+
+CREATE POLICY archived_todos_update ON archived_todos
+    FOR UPDATE
+    USING (
+        user_has_permission('archive.restore') AND (
+            is_admin_user() OR 
+            archived_by = auth.uid() OR 
+            (todo_data->>'assigned_to')::uuid = auth.uid() OR
+            (todo_data->>'created_by')::uuid = auth.uid()
+        )
+    )
+    WITH CHECK (
+        user_has_permission('archive.restore') AND (
+            is_admin_user() OR 
+            archived_by = auth.uid() OR 
+            (todo_data->>'assigned_to')::uuid = auth.uid() OR
+            (todo_data->>'created_by')::uuid = auth.uid()
+        )
+    );
+
+CREATE POLICY archived_todos_delete ON archived_todos
+    FOR DELETE
+    USING (
+        user_has_permission('archive.delete') AND 
+        is_admin_user()
+    );
+
+-- Políticas RLS para archive_policies
+CREATE POLICY archive_policies_select ON archive_policies
+    FOR SELECT
+    USING (user_has_permission('archive.manage_policies'));
+
+CREATE POLICY archive_policies_insert ON archive_policies
+    FOR INSERT
+    WITH CHECK (
+        user_has_permission('archive.manage_policies') AND
+        created_by = auth.uid()
+    );
+
+CREATE POLICY archive_policies_update ON archive_policies
+    FOR UPDATE
+    USING (user_has_permission('archive.manage_policies'))
+    WITH CHECK (user_has_permission('archive.manage_policies'));
+
+CREATE POLICY archive_policies_delete ON archive_policies
+    FOR DELETE
+    USING (user_has_permission('archive.manage_policies'));
+
+-- Políticas RLS para archive_operation_logs
+CREATE POLICY archive_logs_select ON archive_operation_logs
+    FOR SELECT
+    USING (
+        user_has_permission('archive.view') AND (
+            is_admin_user() OR 
+            performed_by = auth.uid()
+        )
+    );
+
+CREATE POLICY archive_logs_insert ON archive_operation_logs
+    FOR INSERT
+    WITH CHECK (performed_by = auth.uid());
+
+-- Políticas RLS para archive_notifications
+CREATE POLICY archive_notifications_select ON archive_notifications
+    FOR SELECT
+    USING (
+        is_admin_user() OR 
+        recipient_id = auth.uid()
+    );
+
+CREATE POLICY archive_notifications_insert ON archive_notifications
+    FOR INSERT
+    WITH CHECK (true);
+
+CREATE POLICY archive_notifications_update ON archive_notifications
+    FOR UPDATE
+    USING (recipient_id = auth.uid())
+    WITH CHECK (recipient_id = auth.uid());
+
+-- ===============================
 -- FIN DE SCRIPT PRINCIPAL DE CONFIGURACIÓN
 -- ===============================
 
@@ -910,29 +1316,44 @@ COMMENT ON FUNCTION update_archive_policy_admin IS 'Función RPC segura para act
 -- - Gestión completa de casos y TODOs
 -- - Seguimiento de tiempo
 -- - Sistema de auditoría centralizado
--- - Políticas de seguridad (RLS)
+-- - Módulo de archivo con permisos granulares
+-- - Políticas de seguridad (RLS) completas
 -- - Funciones RPC para módulo de archivo
-
--- 📁 MÓDULO DE ARCHIVO (OPCIONAL)
--- Para habilitar funcionalidad de archivo completa, ejecutar:
--- database/archive_module.sql
--- 
--- NOTA: Las funciones RPC para actualizaciones de políticas ya están incluidas
 
 -- 🔒 SEGURIDAD
 -- Todas las tablas tienen Row Level Security (RLS) habilitado
 -- Las políticas garantizan aislamiento de datos por usuario
--- Las funciones RPC permiten operaciones administrativas seguras
+-- Los usuarios solo ven sus propios elementos archivados
+-- Los administradores tienen acceso completo
 
 -- 📊 VERIFICACIÓN
 -- Para verificar la instalación:
 -- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
--- Para verificar funciones RPC:
--- SELECT routine_name FROM information_schema.routines WHERE routine_name LIKE '%archive_policy%';
+-- Para verificar permisos de archivo:
+-- SELECT name FROM permissions WHERE name LIKE 'archive.%';
+-- Para verificar políticas RLS:
+-- SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public';
 
 -- 🔧 FUNCIONES RPC DISPONIBLES
 -- - update_archive_policy_admin_unsafe(UUID, JSONB): Actualización sin verificación de roles
 -- - update_archive_policy_admin(UUID, JSONB): Actualización con verificación de roles
+-- - is_admin_user(): Verificar si el usuario actual es administrador
+-- - user_has_permission(text): Verificar permisos específicos
 
-SELECT '✅ Script de configuración principal completado exitosamente' as status;
-SELECT '🔧 Funciones RPC para archivo incluidas' as info;
+-- 📁 MÓDULO DE ARCHIVO INCLUIDO
+-- ✅ Tablas de archivo: archived_cases, archived_todos, archive_policies
+-- ✅ Logs de operaciones: archive_operation_logs
+-- ✅ Notificaciones: archive_notifications
+-- ✅ Permisos granulares: archive.view, archive.create, archive.restore, etc.
+-- ✅ Políticas RLS: Filtrado automático por usuario y permisos
+-- ✅ Índices optimizados para búsqueda y rendimiento
+
+-- 🎯 CARACTERÍSTICAS DE SEGURIDAD DEL ARCHIVO
+-- - Usuarios regulares: Solo ven sus propios elementos archivados
+-- - Administradores: Acceso completo a todos los elementos
+-- - Validación de permisos en múltiples capas (app + DB)
+-- - Auditoría completa de operaciones de archivo
+-- - Protección contra acceso no autorizado
+
+SELECT '✅ Script de configuración completo con módulo de archivo integrado' as status;
+SELECT '� Políticas RLS aplicadas - Sistema seguro y listo para usar' as security_status;

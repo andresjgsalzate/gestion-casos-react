@@ -5,6 +5,27 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-07-02
+
+### 🎨 Mejoras del Menú Lateral
+
+#### ✨ Nuevo
+- **Menú colapsable mejorado**: Implementación completa de menú lateral colapsable con estado persistente
+- **Icono interactivo**: El icono de la aplicación funciona como botón para expandir el menú cuando está colapsado
+- **Interfaz optimizada**: Reducción significativa del espacio ocupado por los controles del menú
+- **Título actualizado**: Cambio global de "Sistema de Gestión de Casos" a "Gestión de Casos"
+
+#### 🔧 Mejorado
+- **Controles de navegación**: Flecha de colapso más pequeña y discreta sin borde circular
+- **Espaciado optimizado**: Reducción del padding para un diseño más compacto
+- **Tooltips inteligentes**: Aparecen solo cuando el menú está colapsado
+- **Transiciones suaves**: Animaciones fluidas entre estados expandido/colapsado
+
+#### 🧹 Limpieza
+- **Archivos eliminados**: Removed archivos markdown de documentación temporal
+- **Carpetas vacías**: Eliminadas carpetas `migration` y `container` no utilizadas
+- **Importaciones optimizadas**: Removidas importaciones innecesarias de iconos
+
 ## [1.3.1] - 2025-06-30
 
 ### 🔧 Refactorización del Módulo de Archivo
